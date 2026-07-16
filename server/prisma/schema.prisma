@@ -1,0 +1,205 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────
+
+enum CourseStatus {
+  DRAFT
+  PENDING_APPROVAL
+  PUBLISHED
+  REJECTED
+}
+
+enum ContentType {
+  VIDEO
+  TEXT
+  QUIZ
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  REFUNDED
+  FAILED
+}
+
+enum PaymentGateway {
+  STRIPE
+  RAZORPAY
+}
+
+// ─── Models ───────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  phone        String?
+  passwordHash String   @map("password_hash")
+  isAdmin      Boolean  @default(false) @map("is_admin")
+  isInstructor Boolean  @default(false) @map("is_instructor")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  courses     Course[]
+  enrollments Enrollment[]
+  payments    Payment[]
+  notes       Note[]
+  questions   Question[]
+
+  @@map("users")
+}
+
+model Course {
+  id             String       @id @default(uuid())
+  title          String
+  description    String
+  thumbnailUrl   String?      @map("thumbnail_url")
+  category       String?
+  price          Decimal      @default(0)
+  difficulty     Difficulty?  @default(BEGINNER)
+  status         CourseStatus @default(DRAFT)
+  instructorId   String       @map("instructor_id")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  instructor    User         @relation(fields: [instructorId], references: [id])
+  chapters      Chapter[]
+  enrollments   Enrollment[]
+
+  @@map("courses")
+}
+
+model Chapter {
+  id         String   @id @default(uuid())
+  title      String
+  orderIndex Int      @map("order_index")
+  courseId    String   @map("course_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  subTopics SubTopic[]
+
+  @@map("chapters")
+}
+
+model SubTopic {
+  id              String      @id @default(uuid())
+  title           String
+  orderIndex      Int         @map("order_index")
+  contentType     ContentType @map("content_type")
+  contentId       String      @map("content_id")
+  durationSeconds Int?        @map("duration_seconds")
+  chapterId        String      @map("chapter_id")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  chapter  Chapter    @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  notes    Note[]
+  questions Question[]
+
+  @@map("sub_topics")
+}
+
+model VideoContent {
+  id            String @id @default(uuid())
+  s3Key         String @map("s3_key")
+  durationSeconds Int?  @map("duration_seconds")
+
+  @@map("video_contents")
+}
+
+model TextContent {
+  id   String @id @default(uuid())
+  body String
+
+  @@map("text_contents")
+}
+
+model QuizContent {
+  id        String @id @default(uuid())
+  questions String // JSON
+
+  @@map("quiz_contents")
+}
+
+model Enrollment {
+  id             String           @id @default(uuid())
+  userId         String           @map("user_id")
+  courseId        String           @map("course_id")
+  paymentId      String?          @map("payment_id")
+  progressPercent Int             @default(0) @map("progress_percent")
+  status         EnrollmentStatus @default(ACTIVE)
+  enrolledAt     DateTime         @default(now()) @map("enrolled_at")
+
+  user    User     @relation(fields: [userId], references: [id])
+  course   Course   @relation(fields: [courseId], references: [id])
+  payment Payment? @relation(fields: [paymentId], references: [id])
+
+  @@map("enrollments")
+}
+
+model Payment {
+  id                   String         @id @default(uuid())
+  userId               String         @map("user_id")
+  amount               Decimal
+  currency             String         @default("USD")
+  gateway              PaymentGateway
+  gatewayTransactionId String         @map("gateway_transaction_id")
+  status               PaymentStatus  @default(PENDING)
+  invoiceUrl           String?        @map("invoice_url")
+  createdAt            DateTime       @default(now()) @map("created_at")
+
+  user        User        @relation(fields: [userId], references: [id])
+  enrollments Enrollment[]
+
+  @@map("payments")
+}
+
+model Note {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  subTopicId     String   @map("sub_topic_id")
+  videoTimestamp Int?     @map("video_timestamp")
+  content        String
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user     User      @relation(fields: [userId], references: [id])
+  subTopic SubTopic  @relation(fields: [subTopicId], references: [id], onDelete: Cascade)
+
+  @@map("notes")
+}
+
+model Question {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  subTopicId String   @map("sub_topic_id")
+  parentId   String?  @map("parent_id")
+  questionText String @map("question_text")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user     User      @relation(fields: [userId], references: [id])
+  subTopic SubTopic  @relation(fields: [subTopicId], references: [id], onDelete: Cascade)
+  parent   Question? @relation("QuestionReplies", fields: [parentId], references: [id])
+  replies  Question[] @relation("QuestionReplies")
+
+  @@map("questions")
+}
