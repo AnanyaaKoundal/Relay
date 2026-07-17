@@ -11,7 +11,7 @@ const features = [
     icon: Layers,
     title: "Structured content organization",
     description:
-      "Courses are organized into chapters and subtopics so learners can track their progress and instructors can build logical learning paths.",
+      "Courses are organized into chapters and lessons so learners can track their progress and instructors can build logical learning paths.",
   },
   {
     icon: MessageCircle,

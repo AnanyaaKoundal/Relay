@@ -58,6 +58,7 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  profile     InstructorProfile?
   courses     Course[]
   enrollments Enrollment[]
   payments    Payment[]
@@ -96,12 +97,12 @@ model Chapter {
   updatedAt  DateTime @updatedAt @map("updated_at")
 
   course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  subTopics SubTopic[]
+  lessons Lesson[]
 
   @@map("chapters")
 }
 
-model SubTopic {
+model Lesson {
   id              String      @id @default(uuid())
   title           String
   orderIndex      Int         @map("order_index")
@@ -116,7 +117,7 @@ model SubTopic {
   notes    Note[]
   questions Question[]
 
-  @@map("sub_topics")
+  @@map("lessons")
 }
 
 model VideoContent {
@@ -177,13 +178,13 @@ model Payment {
 model Note {
   id             String   @id @default(uuid())
   userId         String   @map("user_id")
-  subTopicId     String   @map("sub_topic_id")
+  lessonId     String   @map("lesson_id")
   videoTimestamp Int?     @map("video_timestamp")
   content        String
   createdAt      DateTime @default(now()) @map("created_at")
 
   user     User      @relation(fields: [userId], references: [id])
-  subTopic SubTopic  @relation(fields: [subTopicId], references: [id], onDelete: Cascade)
+  lesson Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@map("notes")
 }
@@ -191,15 +192,34 @@ model Note {
 model Question {
   id         String   @id @default(uuid())
   userId     String   @map("user_id")
-  subTopicId String   @map("sub_topic_id")
+  lessonId String   @map("lesson_id")
   parentId   String?  @map("parent_id")
   questionText String @map("question_text")
   createdAt  DateTime @default(now()) @map("created_at")
 
   user     User      @relation(fields: [userId], references: [id])
-  subTopic SubTopic  @relation(fields: [subTopicId], references: [id], onDelete: Cascade)
+  lesson Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   parent   Question? @relation("QuestionReplies", fields: [parentId], references: [id])
   replies  Question[] @relation("QuestionReplies")
 
   @@map("questions")
+}
+
+model InstructorProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique @map("user_id")
+  headline    String
+  bio         String?
+  expertise   String?
+  experience  String?
+  twitter     String?
+  linkedin    String?
+  github      String?
+  website     String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("instructor_profiles")
 }

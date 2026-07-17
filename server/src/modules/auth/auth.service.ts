@@ -12,7 +12,7 @@ export type AuthPayload = {
   isInstructor: boolean;
 };
 
-function signToken(payload: AuthPayload): string {
+export function signToken(payload: AuthPayload): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
 }
 

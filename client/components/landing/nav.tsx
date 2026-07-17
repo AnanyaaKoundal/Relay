@@ -51,7 +51,7 @@ export function Nav() {
           </Link>
           <Link
             href="/signup"
-            className="inline-flex h-8 items-center rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700 transition-colors duration-200"
+            className="inline-flex h-8 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/80 transition-colors duration-200"
           >
             Get started
           </Link>

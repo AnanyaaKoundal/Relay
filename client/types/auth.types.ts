@@ -21,3 +21,14 @@ export type RegisterInput = {
   email: string;
   password: string;
 };
+
+export type UpgradeToInstructorPayload = {
+  headline: string;
+  bio?: string;
+  expertise?: string;
+  experience?: string;
+  twitter?: string;
+  linkedin?: string;
+  github?: string;
+  website?: string;
+};

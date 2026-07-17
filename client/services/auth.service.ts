@@ -1,4 +1,4 @@
-import type { AuthResponse, LoginInput, RegisterInput, User } from "@/types/auth.types";
+import type { AuthResponse, LoginInput, RegisterInput, User, UpgradeToInstructorPayload } from "@/types/auth.types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
 
@@ -49,4 +49,11 @@ export async function getCurrentUser(): Promise<User> {
 
 export async function logoutUser(): Promise<void> {
   await request<{ message: string }>("/auth/logout", { method: "POST" });
+}
+
+export async function onboardInstructor(payload: UpgradeToInstructorPayload): Promise<AuthResponse> {
+  return request<AuthResponse>("/instructor/onboard", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
