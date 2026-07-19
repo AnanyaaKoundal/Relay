@@ -30,7 +30,7 @@ export default function SignInPage() {
     setLoading(true);
     try {
       await login(parsed.data);
-      router.push("/dashboard");
+      router.push("/home");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid email or password");
     } finally {
