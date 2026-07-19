@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { getCourse, updateCourse } from "@/services/course.service";
+import * as chapterApi from "@/services/chapter.service";
+import * as lessonApi from "@/services/lesson.service";
 import { useConfirm } from "@/components/confirm-modal";
 import {
   VideoLessonEditor,
@@ -36,7 +38,10 @@ import {
   Settings,
   Check,
   Play,
+  Loader2,
 } from "lucide-react";
+
+/* ─── Domain types (backend-mapped) ─── */
 
 type Lesson = {
   id: string;
@@ -45,6 +50,7 @@ type Lesson = {
   durationSeconds: number | null;
   isPreview: boolean;
   content: LessonContent | null;
+  _saving?: boolean;
 };
 
 type Chapter = {
@@ -52,7 +58,51 @@ type Chapter = {
   title: string;
   lessons: Lesson[];
   isExpanded: boolean;
+  _saving?: boolean;
 };
+
+/* ─── Mapping helpers ─── */
+
+function mapLessonContent(
+  contentType: string,
+  content: Record<string, unknown> | null
+): LessonContent | null {
+  if (!content) return null;
+  if (contentType === "VIDEO") {
+    return {
+      videoUrl: (content.videoUrl as string) ?? "",
+      durationSeconds: (content.durationSeconds as number) ?? null,
+      resources: [],
+    } as VideoContent;
+  }
+  if (contentType === "TEXT") {
+    return { body: (content.body as string) ?? "" } as TextContent;
+  }
+  if (contentType === "QUIZ") {
+    const raw = content.questions;
+    const questions = typeof raw === "string" ? JSON.parse(raw as string) : raw ?? [];
+    return { questions } as QuizContent;
+  }
+  return null;
+}
+
+function mapBackendChapter(ch: chapterApi.ChapterItem): Chapter {
+  return {
+    id: ch.id,
+    title: ch.title,
+    isExpanded: true,
+    lessons: (ch.lessons ?? []).map((l) => ({
+      id: l.id,
+      title: l.title,
+      contentType: l.contentType,
+      durationSeconds: l.durationSeconds,
+      isPreview: false,
+      content: mapLessonContent(l.contentType, l.content),
+    })),
+  };
+}
+
+/* ─── Constants ─── */
 
 const lessonTypeConfig: Record<LessonType, { icon: typeof Play; label: string; color: string }> = {
   VIDEO: { icon: Video, label: "Video", color: "text-blue-500" },
@@ -60,27 +110,11 @@ const lessonTypeConfig: Record<LessonType, { icon: typeof Play; label: string; c
   QUIZ: { icon: HelpCircle, label: "Quiz", color: "text-amber-500" },
 };
 
-let idCounter = 100;
-function generateId() {
-  return `local_${++idCounter}_${Date.now()}`;
-}
-
 function formatDuration(seconds: number | null): string {
   if (!seconds) return "—";
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return m > 0 ? `${m}:${s.toString().padStart(2, "0")}` : `0:${s.toString().padStart(2, "0")}`;
-}
-
-function getDefaultContent(type: LessonType): LessonContent {
-  switch (type) {
-    case "VIDEO":
-      return { videoUrl: "", durationSeconds: null, resources: [] } as VideoContent;
-    case "TEXT":
-      return { body: "" } as TextContent;
-    case "QUIZ":
-      return { questions: [] } as QuizContent;
-  }
 }
 
 /* ─── Portal Dropdown ─── */
@@ -255,7 +289,7 @@ function ChapterCard({
   const [editingTitle, setEditingTitle] = useState(false);
   const [title, setTitle] = useState(chapter.title);
   const [showAddLesson, setShowAddLesson] = useState(false);
-  const addBtnRef = useRef<HTMLDivElement>(null);
+  const [addBtnRef, setAddBtnRef] = useState<HTMLDivElement | null>(null);
 
   const handleSaveTitle = () => {
     if (title.trim()) {
@@ -313,8 +347,8 @@ function ChapterCard({
           {chapter.lessons.length} lesson{chapter.lessons.length !== 1 ? "s" : ""}
         </span>
 
-        {/* Add Lesson — portal rendered dropdown */}
-        <div className="relative shrink-0" ref={addBtnRef}>
+        {/* Add Lesson */}
+        <div className="relative shrink-0" ref={setAddBtnRef}>
           <button
             type="button"
             onClick={() => setShowAddLesson(!showAddLesson)}
@@ -324,7 +358,7 @@ function ChapterCard({
             <span className="hidden sm:inline">Lesson</span>
           </button>
           <PortalDropdown
-            anchorRef={addBtnRef}
+            anchorRef={{ current: addBtnRef }}
             open={showAddLesson}
             onClose={() => setShowAddLesson(false)}
           >
@@ -358,7 +392,7 @@ function ChapterCard({
         </button>
       </div>
 
-      {/* Lessons — no overflow hidden here so portals can escape */}
+      {/* Lessons */}
       {chapter.isExpanded && (
         <div className="border-t">
           {chapter.lessons.length === 0 ? (
@@ -404,25 +438,61 @@ export default function CourseBuilderWorkspace() {
   const [description, setDescription] = useState("");
   const [chapters, setChapters] = useState<Chapter[]>([]);
 
-  // Editor state
   const [editorLesson, setEditorLesson] = useState<{
     chapterId: string;
     lessonId: string;
   } | null>(null);
 
+  /* ── Load course + chapters from backend ── */
   useEffect(() => {
     if (!params?.courseId) return;
-    getCourse(params.courseId)
-      .then((c) => {
-        setCourse(c);
-        setTitle(c.title);
-        setDescription(c.description);
-      })
-      .catch(() => setCourse(null))
-      .finally(() => setLoading(false));
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const [c, chs] = await Promise.all([
+          getCourse(params!.courseId),
+          chapterApi.listChapters(params!.courseId),
+        ]);
+        if (cancelled) return;
+
+        // Enrich each chapter's lessons with content from backend
+        const finalChapters: Chapter[] = [];
+        for (const ch of chs) {
+          const lessons = await lessonApi.listLessons(ch.id);
+          finalChapters.push({
+            id: ch.id,
+            title: ch.title,
+            isExpanded: true,
+            lessons: lessons.map((l) => ({
+              id: l.id,
+              title: l.title,
+              contentType: l.contentType,
+              durationSeconds: l.durationSeconds,
+              isPreview: false,
+              content: mapLessonContent(l.contentType, l.content as Record<string, unknown> | null),
+            })),
+          });
+        }
+
+        if (!cancelled) {
+          setCourse(c);
+          setTitle(c.title);
+          setDescription(c.description);
+          setChapters(finalChapters);
+        }
+      } catch {
+        if (!cancelled) setCourse(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => { cancelled = true; };
   }, [params?.courseId]);
 
-  // Find the lesson being edited
+  /* ── Find the lesson being edited ── */
   function findEditingLesson() {
     if (!editorLesson) return null;
     for (const ch of chapters) {
@@ -434,30 +504,7 @@ export default function CourseBuilderWorkspace() {
     return null;
   }
 
-  function handleSaveContent(type: LessonType, data: LessonContent, newTitle: string) {
-    if (!editorLesson) return;
-    setChapters((prev) =>
-      prev.map((c) =>
-        c.id === editorLesson.chapterId
-          ? {
-              ...c,
-              lessons: c.lessons.map((l) =>
-                l.id === editorLesson.lessonId
-                  ? {
-                      ...l,
-                      title: newTitle,
-                      content: data,
-                      durationSeconds:
-                        type === "VIDEO" ? (data as VideoContent).durationSeconds : l.durationSeconds,
-                    }
-                  : l
-              ),
-            }
-          : c
-      )
-    );
-  }
-
+  /* ── Save course details (title/description) ── */
   async function handleSave() {
     if (!course || !params?.courseId) return;
     setSaving(true);
@@ -467,13 +514,12 @@ export default function CourseBuilderWorkspace() {
       setCourse({ ...course, ...updated });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-    } catch {
-      // silent
-    } finally {
+    } catch { /* silent */ } finally {
       setSaving(false);
     }
   }
 
+  /* ── Publish ── */
   async function handlePublish() {
     if (!params?.courseId) return;
     const ok = await confirm({
@@ -487,26 +533,22 @@ export default function CourseBuilderWorkspace() {
     try {
       const updated = await updateCourse(params.courseId, { status: "PUBLISHED" });
       setCourse((prev) => (prev ? { ...prev, ...updated } : prev));
-    } catch {
-      // silent
-    } finally {
+    } catch { /* silent */ } finally {
       setSaving(false);
     }
   }
 
-  const handleAddChapter = () => {
-    setChapters((prev) => [
-      ...prev,
-      {
-        id: generateId(),
-        title: `Chapter ${prev.length + 1}`,
-        lessons: [],
-        isExpanded: true,
-      },
-    ]);
-  };
+  /* ── Add Chapter (immediate backend save) ── */
+  const handleAddChapter = useCallback(async () => {
+    if (!params?.courseId) return;
+    try {
+      const ch = await chapterApi.createChapter(params.courseId, `Chapter ${chapters.length + 1}`);
+      setChapters((prev) => [...prev, mapBackendChapter(ch)]);
+    } catch { /* silent */ }
+  }, [params?.courseId, chapters.length]);
 
-  const handleDeleteChapter = async (chapterId: string) => {
+  /* ── Delete Chapter (immediate backend save) ── */
+  const handleDeleteChapter = useCallback(async (chapterId: string) => {
     const chapter = chapters.find((c) => c.id === chapterId);
     const ok = await confirm({
       title: "Delete chapter",
@@ -515,80 +557,163 @@ export default function CourseBuilderWorkspace() {
       variant: "destructive",
     });
     if (!ok) return;
-    setChapters((prev) => prev.filter((c) => c.id !== chapterId));
-  };
+    try {
+      await chapterApi.deleteChapter(chapterId);
+      setChapters((prev) => prev.filter((c) => c.id !== chapterId));
+    } catch { /* silent */ }
+  }, [chapters, confirm]);
 
-  const handleAddLesson = (chapterId: string, type: LessonType) => {
+  /* ── Update Chapter Title (immediate backend save) ── */
+  const handleUpdateChapterTitle = useCallback(async (chapterId: string, newTitle: string) => {
+    setChapters((prev) =>
+      prev.map((c) => (c.id === chapterId ? { ...c, title: newTitle } : c))
+    );
+    try {
+      await chapterApi.updateChapter(chapterId, { title: newTitle });
+    } catch { /* silent */ }
+  }, []);
+
+  /* ── Add Lesson (immediate backend save) ── */
+  const handleAddLesson = useCallback(async (chapterId: string, type: LessonType) => {
     const typeLabels: Record<LessonType, string> = {
       VIDEO: "New Video Lesson",
       TEXT: "New Text Lesson",
       QUIZ: "New Quiz",
     };
-    const newLesson: Lesson = {
-      id: generateId(),
-      title: typeLabels[type],
-      contentType: type,
-      durationSeconds: null,
-      isPreview: false,
-      content: getDefaultContent(type),
-    };
-    setChapters((prev) =>
-      prev.map((c) =>
-        c.id === chapterId
-          ? { ...c, lessons: [...c.lessons, newLesson], isExpanded: true }
-          : c
-      )
-    );
-    // Open editor immediately
-    setEditorLesson({ chapterId, lessonId: newLesson.id });
-  };
+    try {
+      const l = await lessonApi.createLesson(chapterId, {
+        title: typeLabels[type],
+        contentType: type,
+        ...(type === "VIDEO"
+          ? { videoUrl: "", durationSeconds: undefined }
+          : type === "TEXT"
+          ? { body: "" }
+          : { questions: [] }),
+      });
+      const newLesson: Lesson = {
+        id: l.id,
+        title: l.title,
+        contentType: l.contentType,
+        durationSeconds: l.durationSeconds,
+        isPreview: false,
+        content: mapLessonContent(l.contentType, l.content as Record<string, unknown> | null),
+      };
+      setChapters((prev) =>
+        prev.map((c) =>
+          c.id === chapterId
+            ? { ...c, lessons: [...c.lessons, newLesson], isExpanded: true }
+            : c
+        )
+      );
+      setEditorLesson({ chapterId, lessonId: l.id });
+    } catch { /* silent */ }
+  }, []);
 
-  const handleUpdateLessonTitle = (chapterId: string, lessonId: string, newTitle: string) => {
+  /* ── Update Lesson Title (immediate backend save) ── */
+  const handleUpdateLessonTitle = useCallback(async (chapterId: string, lessonId: string, newTitle: string) => {
     setChapters((prev) =>
       prev.map((c) =>
         c.id === chapterId
-          ? {
-              ...c,
-              lessons: c.lessons.map((l) =>
-                l.id === lessonId ? { ...l, title: newTitle } : l
-              ),
-            }
+          ? { ...c, lessons: c.lessons.map((l) => (l.id === lessonId ? { ...l, title: newTitle } : l)) }
           : c
       )
     );
-  };
+    try {
+      await lessonApi.updateLesson(lessonId, { title: newTitle });
+    } catch { /* silent */ }
+  }, []);
 
-  const handleDeleteLesson = (chapterId: string, lessonId: string) => {
-    setChapters((prev) =>
-      prev.map((c) =>
-        c.id === chapterId
-          ? { ...c, lessons: c.lessons.filter((l) => l.id !== lessonId) }
-          : c
-      )
-    );
-  };
+  /* ── Save lesson content from editor (immediate backend save) ── */
+  const handleSaveContent = useCallback(
+    async (type: LessonType, data: LessonContent, newTitle: string) => {
+      if (!editorLesson) return;
+      const { chapterId, lessonId } = editorLesson;
 
-  const handleToggleLessonPreview = (chapterId: string, lessonId: string) => {
+      // Update local state
+      setChapters((prev) =>
+        prev.map((c) =>
+          c.id === chapterId
+            ? {
+                ...c,
+                lessons: c.lessons.map((l) =>
+                  l.id === lessonId
+                    ? {
+                        ...l,
+                        title: newTitle,
+                        content: data,
+                        durationSeconds:
+                          type === "VIDEO" ? (data as VideoContent).durationSeconds : l.durationSeconds,
+                      }
+                    : l
+                ),
+              }
+            : c
+        )
+      );
+
+      // Persist to backend
+      try {
+        if (type === "VIDEO") {
+          const v = data as VideoContent;
+          await lessonApi.updateLesson(lessonId, {
+            title: newTitle,
+            videoUrl: v.videoUrl,
+            durationSeconds: v.durationSeconds,
+          });
+        } else if (type === "TEXT") {
+          await lessonApi.updateLesson(lessonId, {
+            title: newTitle,
+            body: (data as TextContent).body,
+          });
+        } else if (type === "QUIZ") {
+          const q = data as QuizContent;
+          await lessonApi.updateLesson(lessonId, {
+            title: newTitle,
+            questions: q.questions.map((question) => ({
+              question: question.question,
+              options: question.options.map((o) => o.text),
+              correctAnswer: question.options.findIndex((o) => o.id === question.correctOptionId),
+              explanation: question.explanation,
+            })),
+          });
+        }
+      } catch { /* silent */ }
+    },
+    [editorLesson]
+  );
+
+  /* ── Delete Lesson (immediate backend save) ── */
+  const handleDeleteLesson = useCallback(async (chapterId: string, lessonId: string) => {
+    try {
+      await lessonApi.deleteLesson(lessonId);
+      setChapters((prev) =>
+        prev.map((c) =>
+          c.id === chapterId
+            ? { ...c, lessons: c.lessons.filter((l) => l.id !== lessonId) }
+            : c
+        )
+      );
+    } catch { /* silent */ }
+  }, []);
+
+  /* ── Toggle preview (local only for now) ── */
+  const handleToggleLessonPreview = useCallback((chapterId: string, lessonId: string) => {
     setChapters((prev) =>
       prev.map((c) =>
         c.id === chapterId
-          ? {
-              ...c,
-              lessons: c.lessons.map((l) =>
-                l.id === lessonId ? { ...l, isPreview: !l.isPreview } : l
-              ),
-            }
+          ? { ...c, lessons: c.lessons.map((l) => (l.id === lessonId ? { ...l, isPreview: !l.isPreview } : l)) }
           : c
       )
     );
-  };
+  }, []);
 
   const totalLessons = chapters.reduce((acc, c) => acc + c.lessons.length, 0);
   const editingLesson = findEditingLesson();
 
   if (loading) {
     return (
-      <div className="flex min-h-80 items-center justify-center text-muted-foreground text-sm">
+      <div className="flex min-h-80 items-center justify-center text-muted-foreground text-sm gap-2">
+        <Loader2 className="size-4 animate-spin" />
         Loading course...
       </div>
     );
@@ -632,21 +757,6 @@ export default function CourseBuilderWorkspace() {
         </div>
 
         <div className="flex items-center gap-2">
-          {saved && (
-            <span className="flex items-center gap-1 text-xs text-emerald-600 animate-in fade-in">
-              <Check className="size-3" />
-              Saved
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-          >
-            <Save className="size-3.5" />
-            {saving ? "Saving..." : "Save"}
-          </button>
           {course.status !== "PUBLISHED" && (
             <button
               type="button"
@@ -663,9 +773,28 @@ export default function CourseBuilderWorkspace() {
 
       {/* Course Details */}
       <div className="rounded-xl border bg-card p-5 space-y-4">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Settings className="size-3.5" />
-          <span className="font-medium">Course Details</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Settings className="size-3.5" />
+            <span className="font-medium">Course Details</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {saved && (
+              <span className="flex items-center gap-1 text-xs text-emerald-600 animate-in fade-in">
+                <Check className="size-3" />
+                Saved
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="inline-flex h-7 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            >
+              <Save className="size-3.5" />
+              {saving ? "Saving..." : "Save"}
+            </button>
+          </div>
         </div>
         <div>
           <label htmlFor="course-title" className="text-xs text-muted-foreground font-medium">
@@ -737,32 +866,16 @@ export default function CourseBuilderWorkspace() {
                 chapterNumber={i + 1}
                 onToggleExpand={() =>
                   setChapters((prev) =>
-                    prev.map((c) =>
-                      c.id === chapter.id ? { ...c, isExpanded: !c.isExpanded } : c
-                    )
+                    prev.map((c) => (c.id === chapter.id ? { ...c, isExpanded: !c.isExpanded } : c))
                   )
                 }
-                onUpdateTitle={(t) =>
-                  setChapters((prev) =>
-                    prev.map((c) =>
-                      c.id === chapter.id ? { ...c, title: t } : c
-                    )
-                  )
-                }
+                onUpdateTitle={(t) => handleUpdateChapterTitle(chapter.id, t)}
                 onDelete={() => handleDeleteChapter(chapter.id)}
                 onAddLesson={(type) => handleAddLesson(chapter.id, type)}
-                onUpdateLesson={(lessonId, t) =>
-                  handleUpdateLessonTitle(chapter.id, lessonId, t)
-                }
-                onDeleteLesson={(lessonId) =>
-                  handleDeleteLesson(chapter.id, lessonId)
-                }
-                onToggleLessonPreview={(lessonId) =>
-                  handleToggleLessonPreview(chapter.id, lessonId)
-                }
-                onOpenLessonEditor={(lessonId) =>
-                  setEditorLesson({ chapterId: chapter.id, lessonId })
-                }
+                onUpdateLesson={(lessonId, t) => handleUpdateLessonTitle(chapter.id, lessonId, t)}
+                onDeleteLesson={(lessonId) => handleDeleteLesson(chapter.id, lessonId)}
+                onToggleLessonPreview={(lessonId) => handleToggleLessonPreview(chapter.id, lessonId)}
+                onOpenLessonEditor={(lessonId) => setEditorLesson({ chapterId: chapter.id, lessonId })}
               />
             ))}
 

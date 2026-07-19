@@ -1,24 +1,30 @@
 import type { Request, Response } from "express";
-import { createCourseSchema, updateCourseSchema } from "./course.schema.js";
-import * as courseService from "./course.service.js";
+import { browseCoursesSchema, createCourseSchema, updateCourseSchema } from "./courses.schema.js";
+import * as courseService from "./courses.service.js";
 import { logger } from "../../utils/logger.js";
 
-export async function listCourses(req: Request, res: Response) {
+/* ─── Public ─── */
+
+export async function browseCourses(req: Request, res: Response) {
+  const parsed = browseCoursesSchema.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid query" });
+    return;
+  }
+
   try {
-    const userId = req.user!.userId;
-    const courses = await courseService.listCourses(userId);
-    res.json(courses);
+    const result = await courseService.browseCourses(parsed.data);
+    res.json(result);
   } catch (err: unknown) {
-    logger.error("Failed to list courses", { error: (err as Error).message });
+    logger.error("Failed to browse courses", { error: (err as Error).message });
     res.status(500).json({ error: "Something went wrong" });
   }
 }
 
-export async function getCourse(req: Request, res: Response) {
+export async function getPublicCourse(req: Request, res: Response) {
   try {
-    const userId = req.user!.userId;
-    const courseId = String(req.params.courseId);
-    const course = await courseService.getCourse(userId, courseId);
+    const slug = String(req.params.slug);
+    const course = await courseService.getPublicCourse(slug);
     res.json(course);
   } catch (err: unknown) {
     const error = err as Error & { statusCode?: number };
@@ -31,6 +37,36 @@ export async function getCourse(req: Request, res: Response) {
   }
 }
 
+/* ─── Instructor ─── */
+
+export async function listInstructorCourses(req: Request, res: Response) {
+  try {
+    const courses = await courseService.listInstructorCourses(req.user!.userId);
+    res.json(courses);
+  } catch (err: unknown) {
+    logger.error("Failed to list instructor courses", { error: (err as Error).message });
+    res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
+export async function getInstructorCourse(req: Request, res: Response) {
+  try {
+    const course = await courseService.getInstructorCourse(
+      req.user!.userId,
+      String(req.params.courseId),
+    );
+    res.json(course);
+  } catch (err: unknown) {
+    const error = err as Error & { statusCode?: number };
+    if (error.statusCode) {
+      res.status(error.statusCode).json({ error: error.message });
+      return;
+    }
+    logger.error("Failed to get instructor course", { error: error.message });
+    res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
 export async function createCourse(req: Request, res: Response) {
   const parsed = createCourseSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -39,9 +75,8 @@ export async function createCourse(req: Request, res: Response) {
   }
 
   try {
-    const userId = req.user!.userId;
-    const course = await courseService.createCourse(userId, parsed.data);
-    logger.info(`Course created: ${course.id} by ${userId}`);
+    const course = await courseService.createCourse(req.user!.userId, parsed.data);
+    logger.info(`Course created: ${course.id} by ${req.user!.userId}`);
     res.status(201).json(course);
   } catch (err: unknown) {
     logger.error("Failed to create course", { error: (err as Error).message });
@@ -57,9 +92,11 @@ export async function updateCourse(req: Request, res: Response) {
   }
 
   try {
-    const userId = req.user!.userId;
-    const courseId = String(req.params.courseId);
-    const course = await courseService.updateCourse(userId, courseId, parsed.data);
+    const course = await courseService.updateCourse(
+      req.user!.userId,
+      String(req.params.courseId),
+      parsed.data,
+    );
     logger.info(`Course updated: ${course.id}`);
     res.json(course);
   } catch (err: unknown) {
@@ -75,9 +112,8 @@ export async function updateCourse(req: Request, res: Response) {
 
 export async function deleteCourse(req: Request, res: Response) {
   try {
-    const userId = req.user!.userId;
     const courseId = String(req.params.courseId);
-    await courseService.deleteCourse(userId, courseId);
+    await courseService.deleteCourse(req.user!.userId, courseId);
     logger.info(`Course deleted: ${courseId}`);
     res.json({ message: "Course deleted" });
   } catch (err: unknown) {

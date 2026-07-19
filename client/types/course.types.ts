@@ -4,6 +4,7 @@ export type CourseListItem = {
   id: string;
   title: string;
   description: string;
+  thumbnailUrl: string | null;
   status: CourseStatus;
   difficulty: string | null;
   category: string | null;

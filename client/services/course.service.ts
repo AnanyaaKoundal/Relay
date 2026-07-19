@@ -29,27 +29,27 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export async function getMyCourses(): Promise<CourseListItem[]> {
-  return request<CourseListItem[]>("/instructor/courses");
+  return request<CourseListItem[]>("/courses/instructor");
 }
 
 export async function getCourse(courseId: string): Promise<CourseDetail> {
-  return request<CourseDetail>(`/instructor/courses/${courseId}`);
+  return request<CourseDetail>(`/courses/instructor/${courseId}`);
 }
 
 export async function createCourse(input: CreateCourseInput): Promise<CourseDetail> {
-  return request<CourseDetail>("/instructor/courses", {
+  return request<CourseDetail>("/courses/instructor", {
     method: "POST",
     body: JSON.stringify(input),
   });
 }
 
 export async function updateCourse(courseId: string, input: UpdateCourseInput): Promise<CourseDetail> {
-  return request<CourseDetail>(`/instructor/courses/${courseId}`, {
+  return request<CourseDetail>(`/courses/instructor/${courseId}`, {
     method: "PATCH",
     body: JSON.stringify(input),
   });
 }
 
 export async function deleteCourse(courseId: string): Promise<void> {
-  await request<{ message: string }>(`/instructor/courses/${courseId}`, { method: "DELETE" });
+  await request<{ message: string }>(`/courses/instructor/${courseId}`, { method: "DELETE" });
 }

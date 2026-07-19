@@ -122,9 +122,10 @@ model Lesson {
 }
 
 model VideoContent {
-  id            String @id @default(uuid())
-  s3Key         String @map("s3_key")
-  durationSeconds Int?  @map("duration_seconds")
+  id              String  @id @default(uuid())
+  s3Key           String  @map("s3_key")
+  videoUrl        String? @map("video_url")
+  durationSeconds Int?    @map("duration_seconds")
 
   @@map("video_contents")
 }

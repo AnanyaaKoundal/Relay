@@ -69,7 +69,7 @@ export default function StudioNewCoursePage() {
           </div>
           <div>
             <label className="text-sm font-medium">Free or Paid</label>
-            <select name="price_type" className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" defaultValue="free" onChange={(e) => document.getElementById("price").value = e.target.value === "free"? "0" : ""}>
+            <select name="price_type" className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" defaultValue="free" onChange={(e) => { const el = document.getElementById("price") as HTMLInputElement | null; if (el) el.value = e.target.value === "free" ? "0" : ""; }}>
               <option value="free">Free</option>
               <option value="paid">Paid</option>
             </select>
