@@ -1,0 +1,232 @@
+import { prisma } from "../../lib/prisma.js";
+
+/* ─── Enroll ─── */
+
+export async function enrollInCourse(userId: string, courseId: string) {
+  const course = await prisma.course.findFirst({
+    where: { id: courseId, status: "PUBLISHED" },
+    select: { id: true },
+  });
+  if (!course) {
+    throw Object.assign(new Error("Course not found or not published"), {
+      statusCode: 404,
+    });
+  }
+
+  const existing = await prisma.enrollment.findUnique({
+    where: { userId_courseId: { userId, courseId } },
+  });
+  if (existing) {
+    throw Object.assign(new Error("Already enrolled in this course"), {
+      statusCode: 409,
+    });
+  }
+
+  return prisma.enrollment.create({
+    data: { userId, courseId },
+    include: { course: { select: { id: true, title: true } } },
+  });
+}
+
+/* ─── Check enrollment ─── */
+
+export async function checkEnrollment(userId: string, courseId: string) {
+  const enrollment = await prisma.enrollment.findUnique({
+    where: { userId_courseId: { userId, courseId } },
+    include: {
+      course: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          thumbnailUrl: true,
+          instructor: { select: { id: true, name: true } },
+          chapters: {
+            orderBy: { orderIndex: "asc" },
+            select: {
+              id: true,
+              title: true,
+              orderIndex: true,
+              lessons: {
+                orderBy: { orderIndex: "asc" },
+                select: {
+                  id: true,
+                  title: true,
+                  contentType: true,
+                  durationSeconds: true,
+                  orderIndex: true,
+                  isPreview: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      progress: {
+        select: { lessonId: true, completedAt: true },
+      },
+    },
+  });
+
+  return enrollment;
+}
+
+/* ─── List enrolled courses ─── */
+
+export async function listEnrolledCourses(userId: string) {
+  return prisma.enrollment.findMany({
+    where: { userId },
+    include: {
+      course: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          thumbnailUrl: true,
+          category: true,
+          difficulty: true,
+          instructor: { select: { id: true, name: true } },
+          chapters: {
+            select: {
+              lessons: { select: { id: true } },
+            },
+          },
+        },
+      },
+      progress: {
+        select: { lessonId: true },
+      },
+    },
+    orderBy: { enrolledAt: "desc" },
+  });
+}
+
+/* ─── Get lesson content (enrollment-gated) ─── */
+
+export async function getLessonContent(
+  userId: string,
+  lessonId: string,
+) {
+  const lesson = await prisma.lesson.findUnique({
+    where: { id: lessonId },
+    include: {
+      chapter: {
+        select: { courseId: true },
+      },
+    },
+  });
+
+  if (!lesson) {
+    throw Object.assign(new Error("Lesson not found"), { statusCode: 404 });
+  }
+
+  const enrollment = await prisma.enrollment.findUnique({
+    where: {
+      userId_courseId: { userId, courseId: lesson.chapter.courseId },
+    },
+    select: { id: true },
+  });
+
+  if (!enrollment && !lesson.isPreview) {
+    throw Object.assign(new Error("You must be enrolled to view this lesson"), {
+      statusCode: 403,
+    });
+  }
+
+  let content: Record<string, unknown> | null = null;
+
+  if (lesson.contentType === "VIDEO") {
+    content = await prisma.videoContent.findUnique({
+      where: { id: lesson.contentId },
+    });
+  } else if (lesson.contentType === "TEXT") {
+    content = await prisma.textContent.findUnique({
+      where: { id: lesson.contentId },
+    });
+  } else if (lesson.contentType === "QUIZ") {
+    const raw = await prisma.quizContent.findUnique({
+      where: { id: lesson.contentId },
+    });
+    if (raw) {
+      content = { ...raw, questions: JSON.parse(raw.questions as string) };
+    }
+  }
+
+  return {
+    id: lesson.id,
+    title: lesson.title,
+    contentType: lesson.contentType,
+    durationSeconds: lesson.durationSeconds,
+    isPreview: lesson.isPreview,
+    content,
+  };
+}
+
+/* ─── Mark lesson complete ─── */
+
+export async function markLessonComplete(
+  userId: string,
+  lessonId: string,
+) {
+  const lesson = await prisma.lesson.findUnique({
+    where: { id: lessonId },
+    include: { chapter: { select: { courseId: true } } },
+  });
+
+  if (!lesson) {
+    throw Object.assign(new Error("Lesson not found"), { statusCode: 404 });
+  }
+
+  const courseId = lesson.chapter.courseId;
+
+  const enrollment = await prisma.enrollment.findUnique({
+    where: { userId_courseId: { userId, courseId } },
+  });
+
+  if (!enrollment) {
+    throw Object.assign(new Error("You must be enrolled in this course"), {
+      statusCode: 403,
+    });
+  }
+
+  // Upsert progress record
+  await prisma.lessonProgress.upsert({
+    where: { userId_lessonId: { userId, lessonId } },
+    create: { userId, lessonId, enrollmentId: enrollment.id },
+    update: {},
+  });
+
+  // Recalculate progress percentage
+  const totalLessons = await prisma.lesson.count({
+    where: {
+      chapter: { courseId },
+    },
+  });
+
+  const completedLessons = await prisma.lessonProgress.count({
+    where: {
+      enrollmentId: enrollment.id,
+    },
+  });
+
+  const progressPercent =
+    totalLessons > 0
+      ? Math.round((completedLessons / totalLessons) * 100)
+      : 0;
+
+  const updatedEnrollment = await prisma.enrollment.update({
+    where: { id: enrollment.id },
+    data: {
+      progressPercent,
+      status: progressPercent === 100 ? "COMPLETED" : "ACTIVE",
+    },
+    select: { progressPercent: true, status: true },
+  });
+
+  return {
+    lessonId,
+    completed: true,
+    progressPercent: updatedEnrollment.progressPercent,
+    courseCompleted: updatedEnrollment.status === "COMPLETED",
+  };
+}

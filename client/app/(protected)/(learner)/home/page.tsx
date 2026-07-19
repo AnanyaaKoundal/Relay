@@ -1,96 +1,15 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { CourseCard } from "@/components/course-card";
-import { ArrowRight, BookOpen, Sparkles, Clock } from "lucide-react";
-
-const enrolledCourses = [
-  {
-    id: "1",
-    title: "Full-Stack Web Development with React & Node.js",
-    instructor: "Sarah Chen",
-    slug: "full-stack-web-development",
-    progress: 68,
-    lastLesson: "Lesson 8: Authentication Flow",
-    thumbnail: null,
-  },
-  {
-    id: "2",
-    title: "Advanced TypeScript Patterns",
-    instructor: "Alex Rivera",
-    slug: "advanced-typescript",
-    progress: 32,
-    lastLesson: "Lesson 3: Generics Deep Dive",
-    thumbnail: null,
-  },
-  {
-    id: "3",
-    title: "System Design for Senior Engineers",
-    instructor: "James Wilson",
-    slug: "system-design",
-    progress: 15,
-    lastLesson: "Lesson 2: Load Balancing",
-    thumbnail: null,
-  },
-];
-
-const recommendedCourses = [
-  {
-    id: "4",
-    title: "Machine Learning Fundamentals",
-    instructor: "Dr. Emily Park",
-    rating: 4.9,
-    students: 3200,
-    price: 59,
-    thumbnail: null,
-  },
-  {
-    id: "5",
-    title: "Cloud Architecture with AWS",
-    instructor: "Michael Thompson",
-    rating: 4.7,
-    students: 1800,
-    price: 49,
-    thumbnail: null,
-  },
-  {
-    id: "6",
-    title: "Design Systems at Scale",
-    instructor: "Lisa Chen",
-    rating: 4.8,
-    students: 950,
-    price: 0,
-    thumbnail: null,
-  },
-  {
-    id: "7",
-    title: "Rust for Systems Programming",
-    instructor: "David Kim",
-    rating: 4.6,
-    students: 2100,
-    price: 39,
-    thumbnail: null,
-  },
-  {
-    id: "8",
-    title: "Data Engineering with Python",
-    instructor: "Anna Schmidt",
-    rating: 4.5,
-    students: 1400,
-    price: 45,
-    thumbnail: null,
-  },
-  {
-    id: "9",
-    title: "iOS Development with Swift",
-    instructor: "Chris Martinez",
-    rating: 4.7,
-    students: 2800,
-    price: 55,
-    thumbnail: null,
-  },
-];
+import { browseCourses, type PublicCourse } from "@/services/course.service";
+import {
+  listEnrolledCourses,
+  type Enrollment,
+} from "@/services/enrollment.service";
+import { ArrowRight, BookOpen, Sparkles, Clock, Loader2 } from "lucide-react";
 
 function SectionHeader({
   icon: Icon,
@@ -130,8 +49,34 @@ function CourseRow({ children }: { children: React.ReactNode }) {
   );
 }
 
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="rounded-xl border bg-card p-8 text-center">
+      <BookOpen className="size-10 mx-auto text-muted-foreground/50 mb-3" />
+      <p className="text-sm text-muted-foreground">{message}</p>
+    </div>
+  );
+}
+
 export default function HomePage() {
   const { user } = useAuth();
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [courses, setCourses] = useState<PublicCourse[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      listEnrolledCourses().catch(() => [] as Enrollment[]),
+      browseCourses({ limit: 12 })
+        .then((res) => res.courses)
+        .catch(() => [] as PublicCourse[]),
+    ])
+      .then(([enrollData, courseData]) => {
+        setEnrollments(enrollData);
+        setCourses(courseData);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const greeting = () => {
     const hour = new Date().getHours();
@@ -139,6 +84,15 @@ export default function HomePage() {
     if (hour < 17) return "Good afternoon";
     return "Good evening";
   };
+
+  const categories = [
+    "Web Development",
+    "Data Science",
+    "Mobile Development",
+    "Cloud & DevOps",
+    "Design",
+    "Business",
+  ];
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8 space-y-10">
@@ -153,7 +107,7 @@ export default function HomePage() {
       </div>
 
       {/* Continue Learning */}
-      {enrolledCourses.length > 0 && (
+      {enrollments.length > 0 && (
         <section>
           <SectionHeader
             icon={Clock}
@@ -162,58 +116,34 @@ export default function HomePage() {
             actionLabel="View all"
           />
           <CourseRow>
-            {enrolledCourses.map((course) => (
-              <div key={course.id} className="w-72 shrink-0">
-                <CourseCard {...course} showContinue />
-              </div>
-            ))}
+            {enrollments.map((enrollment) => {
+              const totalLessons = enrollment.course.chapters.reduce(
+                (acc, ch) => acc + ch.lessons.length,
+                0,
+              );
+              return (
+                <div key={enrollment.id} className="w-72 shrink-0">
+                  <CourseCard
+                    id={enrollment.course.id}
+                    title={enrollment.course.title}
+                    instructor={enrollment.course.instructor?.name}
+                    thumbnail={enrollment.course.thumbnailUrl}
+                    progress={enrollment.progressPercent}
+                    learnHref={`/courses/${enrollment.course.id}/learn`}
+                    lastLesson={
+                      totalLessons > 0
+                        ? `${enrollment.progress.length}/${totalLessons} lessons`
+                        : undefined
+                    }
+                  />
+                </div>
+              );
+            })}
           </CourseRow>
         </section>
       )}
 
-      {/* My Courses */}
-      <section>
-        <SectionHeader
-          icon={BookOpen}
-          title="Your Courses"
-          actionHref="/my-courses"
-          actionLabel="View all"
-        />
-        {enrolledCourses.length > 0 ? (
-          <CourseRow>
-            {enrolledCourses.map((course) => (
-              <div key={course.id} className="w-72 shrink-0">
-                <CourseCard {...course} showContinue={false} />
-              </div>
-            ))}
-            {/* View All card */}
-            <Link
-              href="/my-courses"
-              className="w-72 shrink-0 flex items-center justify-center rounded-xl border-2 border-dashed bg-card/50 transition-colors hover:bg-card hover:border-primary/30 min-h-[280px]"
-            >
-              <div className="text-center space-y-2">
-                <ArrowRight className="size-6 mx-auto text-muted-foreground" />
-                <p className="text-sm font-medium text-muted-foreground">View All Courses</p>
-              </div>
-            </Link>
-          </CourseRow>
-        ) : (
-          <div className="rounded-xl border bg-card p-8 text-center">
-            <BookOpen className="size-10 mx-auto text-muted-foreground/50 mb-3" />
-            <p className="text-sm text-muted-foreground mb-4">
-              You haven&apos;t enrolled in any courses yet.
-            </p>
-            <Link
-              href="/courses"
-              className="inline-flex h-9 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/80 transition-colors"
-            >
-              Browse Courses
-            </Link>
-          </div>
-        )}
-      </section>
-
-      {/* Recommended */}
+      {/* Recommended for You */}
       <section>
         <SectionHeader
           icon={Sparkles}
@@ -221,27 +151,36 @@ export default function HomePage() {
           actionHref="/courses"
           actionLabel="Explore more"
         />
-        <CourseRow>
-          {recommendedCourses.map((course) => (
-            <div key={course.id} className="w-72 shrink-0">
-              <CourseCard {...course} showContinue={false} />
-            </div>
-          ))}
-        </CourseRow>
+        {loading ? (
+          <div className="flex items-center justify-center py-12 text-muted-foreground text-sm gap-2">
+            <Loader2 className="size-4 animate-spin" />
+            Loading courses...
+          </div>
+        ) : courses.length > 0 ? (
+          <CourseRow>
+            {courses.map((course) => (
+              <div key={course.id} className="w-72 shrink-0">
+                <CourseCard
+                  id={course.id}
+                  title={course.title}
+                  instructor={course.instructor?.name}
+                  thumbnail={course.thumbnailUrl}
+                  price={Number(course.price)}
+                  showContinue={false}
+                />
+              </div>
+            ))}
+          </CourseRow>
+        ) : (
+          <EmptyState message="No courses available yet. Check back soon!" />
+        )}
       </section>
 
       {/* Browse by Category */}
       <section>
         <SectionHeader icon={BookOpen} title="Browse by Category" />
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {[
-            "Web Development",
-            "Data Science",
-            "Mobile Development",
-            "Cloud & DevOps",
-            "Design",
-            "Business",
-          ].map((cat) => (
+          {categories.map((cat) => (
             <Link
               key={cat}
               href={`/courses?category=${encodeURIComponent(cat)}`}

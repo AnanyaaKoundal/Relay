@@ -56,6 +56,7 @@ export type LessonItem = {
   contentId: string;
   orderIndex: number;
   durationSeconds: number | null;
+  isPreview: boolean;
   chapterId: string;
   content: VideoContentData | TextContentData | QuizContentData | null;
 };
@@ -64,6 +65,7 @@ export type CreateLessonInput = {
   title: string;
   contentType: LessonType;
   durationSeconds?: number | null;
+  isPreview?: boolean;
   videoUrl?: string;
   s3Key?: string;
   body?: string;
@@ -79,6 +81,7 @@ export type UpdateLessonInput = {
   title?: string;
   orderIndex?: number;
   durationSeconds?: number | null;
+  isPreview?: boolean;
   videoUrl?: string | null;
   s3Key?: string | null;
   body?: string;

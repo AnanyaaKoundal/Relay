@@ -28,6 +28,69 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return data as T;
 }
 
+/* ─── Public ─── */
+
+export type PublicCourse = {
+  id: string;
+  title: string;
+  description: string;
+  thumbnailUrl: string | null;
+  category: string | null;
+  price: number;
+  difficulty: string | null;
+  status: string;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  instructor: { id: string; name: string } | null;
+  _count: { chapters: number; enrollments: number };
+};
+
+export type PublicCourseDetail = PublicCourse & {
+  chapters: {
+    id: string;
+    title: string;
+    orderIndex: number;
+    lessons: {
+      id: string;
+      title: string;
+      contentType: string;
+      durationSeconds: number | null;
+      isPreview: boolean;
+    }[];
+  }[];
+};
+
+export type BrowseResult = {
+  courses: PublicCourse[];
+  pagination: { page: number; limit: number; total: number; pages: number };
+};
+
+export async function browseCourses(params?: {
+  search?: string;
+  category?: string;
+  difficulty?: string;
+  free?: boolean;
+  page?: number;
+  limit?: number;
+}): Promise<BrowseResult> {
+  const qs = new URLSearchParams();
+  if (params?.search) qs.set("search", params.search);
+  if (params?.category) qs.set("category", params.category);
+  if (params?.difficulty) qs.set("difficulty", params.difficulty);
+  if (params?.free !== undefined) qs.set("free", String(params.free));
+  if (params?.page) qs.set("page", String(params.page));
+  if (params?.limit) qs.set("limit", String(params.limit));
+  const query = qs.toString();
+  return request<BrowseResult>(`/courses${query ? `?${query}` : ""}`);
+}
+
+export async function getPublicCourse(slug: string): Promise<PublicCourseDetail> {
+  return request<PublicCourseDetail>(`/courses/published/${encodeURIComponent(slug)}`);
+}
+
+/* ─── Instructor ─── */
+
 export async function getMyCourses(): Promise<CourseListItem[]> {
   return request<CourseListItem[]>("/courses/instructor");
 }

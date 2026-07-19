@@ -45,6 +45,7 @@ export type LessonItem = {
   contentId: string;
   orderIndex: number;
   durationSeconds: number | null;
+  isPreview: boolean;
   chapterId: string;
   content: Record<string, unknown> | null;
 };

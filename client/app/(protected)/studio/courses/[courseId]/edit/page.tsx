@@ -96,7 +96,7 @@ function mapBackendChapter(ch: chapterApi.ChapterItem): Chapter {
       title: l.title,
       contentType: l.contentType,
       durationSeconds: l.durationSeconds,
-      isPreview: false,
+      isPreview: l.isPreview,
       content: mapLessonContent(l.contentType, l.content),
     })),
   };
@@ -135,7 +135,7 @@ function PortalDropdown({
     if (open && anchorRef.current) {
       const rect = anchorRef.current.getBoundingClientRect();
       setPos({
-        top: rect.bottom + window.scrollY + 4,
+        top: rect.bottom + 4,
         right: window.innerWidth - rect.right,
       });
     }
@@ -273,6 +273,7 @@ function ChapterCard({
   onUpdateLesson,
   onDeleteLesson,
   onToggleLessonPreview,
+  onToggleChapterPreview,
   onOpenLessonEditor,
 }: {
   chapter: Chapter;
@@ -284,12 +285,16 @@ function ChapterCard({
   onUpdateLesson: (lessonId: string, title: string) => void;
   onDeleteLesson: (lessonId: string) => void;
   onToggleLessonPreview: (lessonId: string) => void;
+  onToggleChapterPreview: () => void;
   onOpenLessonEditor: (lessonId: string) => void;
 }) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [title, setTitle] = useState(chapter.title);
   const [showAddLesson, setShowAddLesson] = useState(false);
   const [addBtnRef, setAddBtnRef] = useState<HTMLDivElement | null>(null);
+
+  const allPreview = chapter.lessons.length > 0 && chapter.lessons.every((l) => l.isPreview);
+  const somePreview = chapter.lessons.some((l) => l.isPreview) && !allPreview;
 
   const handleSaveTitle = () => {
     if (title.trim()) {
@@ -346,6 +351,25 @@ function ChapterCard({
         <span className="text-xs text-muted-foreground shrink-0">
           {chapter.lessons.length} lesson{chapter.lessons.length !== 1 ? "s" : ""}
         </span>
+
+        {/* Chapter Preview Toggle */}
+        {chapter.lessons.length > 0 && (
+          <button
+            type="button"
+            onClick={onToggleChapterPreview}
+            className={`shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+              allPreview
+                ? "bg-primary/10 text-primary"
+                : somePreview
+                ? "bg-primary/5 text-primary/60"
+                : "text-muted-foreground/50 hover:text-muted-foreground"
+            }`}
+            title={allPreview ? "All lessons are preview" : "Mark all lessons as preview"}
+          >
+            {allPreview ? <Eye className="size-3" /> : somePreview ? <Eye className="size-3 opacity-50" /> : <Eye className="size-3" />}
+            <span className="hidden sm:inline">Chapter</span>
+          </button>
+        )}
 
         {/* Add Lesson */}
         <div className="relative shrink-0" ref={setAddBtnRef}>
@@ -469,7 +493,7 @@ export default function CourseBuilderWorkspace() {
               title: l.title,
               contentType: l.contentType,
               durationSeconds: l.durationSeconds,
-              isPreview: false,
+              isPreview: l.isPreview,
               content: mapLessonContent(l.contentType, l.content as Record<string, unknown> | null),
             })),
           });
@@ -522,10 +546,22 @@ export default function CourseBuilderWorkspace() {
   /* ── Publish ── */
   async function handlePublish() {
     if (!params?.courseId) return;
+
+    const totalLessons = chapters.reduce((acc, c) => acc + c.lessons.length, 0);
+    if (chapters.length === 0 || totalLessons === 0) {
+      await confirm({
+        title: "Cannot publish",
+        description:
+          "You need at least one chapter with one lesson before publishing.",
+        confirmLabel: "OK",
+      });
+      return;
+    }
+
     const ok = await confirm({
       title: "Publish course",
       description:
-        "Your course will become visible to learners. Make sure you have at least one chapter and one lesson.",
+        "Your course will become visible to learners. Make sure everything looks good.",
       confirmLabel: "Publish",
     });
     if (!ok) return;
@@ -696,16 +732,60 @@ export default function CourseBuilderWorkspace() {
     } catch { /* silent */ }
   }, []);
 
-  /* ── Toggle preview (local only for now) ── */
-  const handleToggleLessonPreview = useCallback((chapterId: string, lessonId: string) => {
+  /* ── Toggle preview (persisted with confirmation) ── */
+  const handleToggleLessonPreview = useCallback(async (chapterId: string, lessonId: string) => {
+    const lesson = chapters
+      .find((c) => c.id === chapterId)
+      ?.lessons.find((l) => l.id === lessonId);
+    if (!lesson) return;
+    const newValue = !lesson.isPreview;
+    const ok = await confirm({
+      title: newValue ? "Enable free preview" : "Disable free preview",
+      description: newValue
+        ? `Learners will be able to view "${lesson.title}" without enrolling.`
+        : `Learners will need to enroll to view "${lesson.title}".`,
+      confirmLabel: newValue ? "Enable Preview" : "Disable Preview",
+    });
+    if (!ok) return;
     setChapters((prev) =>
       prev.map((c) =>
         c.id === chapterId
-          ? { ...c, lessons: c.lessons.map((l) => (l.id === lessonId ? { ...l, isPreview: !l.isPreview } : l)) }
+          ? { ...c, lessons: c.lessons.map((l) => (l.id === lessonId ? { ...l, isPreview: newValue } : l)) }
           : c
       )
     );
-  }, []);
+    try {
+      await lessonApi.updateLesson(lessonId, { isPreview: newValue });
+    } catch { /* silent */ }
+  }, [chapters, confirm]);
+
+  /* ── Toggle chapter preview (all lessons in chapter) ── */
+  const handleToggleChapterPreview = useCallback(async (chapterId: string) => {
+    const chapter = chapters.find((c) => c.id === chapterId);
+    if (!chapter || chapter.lessons.length === 0) return;
+    const allPreview = chapter.lessons.every((l) => l.isPreview);
+    const newValue = !allPreview;
+    const ok = await confirm({
+      title: newValue ? "Enable chapter preview" : "Disable chapter preview",
+      description: newValue
+        ? `All ${chapter.lessons.length} lesson${chapter.lessons.length !== 1 ? "s" : ""} in "${chapter.title}" will be marked as free preview.`
+        : `All lessons in "${chapter.title}" will be locked. Learners will need to enroll.`,
+      confirmLabel: newValue ? "Enable All" : "Lock All",
+    });
+    if (!ok) return;
+    setChapters((prev) =>
+      prev.map((c) =>
+        c.id === chapterId
+          ? { ...c, lessons: c.lessons.map((l) => ({ ...l, isPreview: newValue })) }
+          : c
+      )
+    );
+    try {
+      await Promise.all(
+        chapter.lessons.map((l) => lessonApi.updateLesson(l.id, { isPreview: newValue }))
+      );
+    } catch { /* silent */ }
+  }, [chapters, confirm]);
 
   const totalLessons = chapters.reduce((acc, c) => acc + c.lessons.length, 0);
   const editingLesson = findEditingLesson();
@@ -875,6 +955,7 @@ export default function CourseBuilderWorkspace() {
                 onUpdateLesson={(lessonId, t) => handleUpdateLessonTitle(chapter.id, lessonId, t)}
                 onDeleteLesson={(lessonId) => handleDeleteLesson(chapter.id, lessonId)}
                 onToggleLessonPreview={(lessonId) => handleToggleLessonPreview(chapter.id, lessonId)}
+                onToggleChapterPreview={() => handleToggleChapterPreview(chapter.id)}
                 onOpenLessonEditor={(lessonId) => setEditorLesson({ chapterId: chapter.id, lessonId })}
               />
             ))}

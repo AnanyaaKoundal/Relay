@@ -16,6 +16,7 @@ type CourseCardProps = {
   students?: number;
   price?: number;
   showContinue?: boolean;
+  learnHref?: string;
 };
 
 export function CourseCard({
@@ -30,9 +31,11 @@ export function CourseCard({
   students,
   price,
   showContinue = true,
+  learnHref,
 }: CourseCardProps) {
-  const href = slug ? `/learn/${slug}` : `/courses/${id}`;
-  const hasProgress = progress !== undefined && progress > 0;
+  const href = learnHref ?? (slug ? `/learn/${slug}` : `/courses/${id}`);
+  const isEnrolled = progress !== undefined;
+  const hasProgress = isEnrolled && progress > 0;
 
   return (
     <Link href={href} className="group block">
@@ -47,11 +50,12 @@ export function CourseCard({
               className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
-            <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
-              <span className="text-2xl font-bold text-primary/30">
-                {title.charAt(0)}
-              </span>
-            </div>
+            <Image
+              src="/thumbnail.avif"
+              alt={title}
+              fill
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+            />
           )}
 
           {/* Play overlay on hover */}
@@ -97,10 +101,10 @@ export function CourseCard({
           )}
 
           {/* Progress */}
-          {hasProgress && (
+          {isEnrolled && (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="truncate">{lastLesson ?? "In progress"}</span>
+                <span className="truncate">{lastLesson ?? (hasProgress ? "In progress" : "Not started")}</span>
                 <span className="shrink-0 ml-2">{progress}%</span>
               </div>
               <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
@@ -115,7 +119,7 @@ export function CourseCard({
                   className="mt-1 inline-flex h-7 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/80 transition-colors"
                 >
                   <Play className="size-3 fill-current" />
-                  Continue
+                  {hasProgress ? "Continue" : "Start"}
                 </button>
               )}
             </div>

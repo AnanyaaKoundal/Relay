@@ -58,12 +58,13 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  profile     InstructorProfile?
-  courses     Course[]
-  enrollments Enrollment[]
-  payments    Payment[]
-  notes       Note[]
-  questions   Question[]
+  profile        InstructorProfile?
+  courses        Course[]
+  enrollments    Enrollment[]
+  payments       Payment[]
+  notes          Note[]
+  questions      Question[]
+  lessonProgress LessonProgress[]
 
   @@map("users")
 }
@@ -110,6 +111,7 @@ model Lesson {
   contentType     ContentType @map("content_type")
   contentId       String      @map("content_id")
   durationSeconds Int?        @map("duration_seconds")
+  isPreview       Boolean     @default(false) @map("is_preview")
   chapterId        String      @map("chapter_id")
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")
@@ -117,6 +119,7 @@ model Lesson {
   chapter  Chapter    @relation(fields: [chapterId], references: [id], onDelete: Cascade)
   notes    Note[]
   questions Question[]
+  progress LessonProgress[]
 
   @@map("lessons")
 }
@@ -145,18 +148,20 @@ model QuizContent {
 }
 
 model Enrollment {
-  id             String           @id @default(uuid())
-  userId         String           @map("user_id")
-  courseId        String           @map("course_id")
-  paymentId      String?          @map("payment_id")
-  progressPercent Int             @default(0) @map("progress_percent")
-  status         EnrollmentStatus @default(ACTIVE)
-  enrolledAt     DateTime         @default(now()) @map("enrolled_at")
+  id              String           @id @default(uuid())
+  userId          String           @map("user_id")
+  courseId         String           @map("course_id")
+  paymentId       String?          @map("payment_id")
+  progressPercent Int              @default(0) @map("progress_percent")
+  status          EnrollmentStatus @default(ACTIVE)
+  enrolledAt      DateTime         @default(now()) @map("enrolled_at")
 
-  user    User     @relation(fields: [userId], references: [id])
-  course   Course   @relation(fields: [courseId], references: [id])
-  payment Payment? @relation(fields: [paymentId], references: [id])
+  user    User             @relation(fields: [userId], references: [id])
+  course  Course           @relation(fields: [courseId], references: [id])
+  payment Payment?         @relation(fields: [paymentId], references: [id])
+  progress LessonProgress[]
 
+  @@unique([userId, courseId])
   @@map("enrollments")
 }
 
@@ -224,4 +229,19 @@ model InstructorProfile {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("instructor_profiles")
+}
+
+model LessonProgress {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  lessonId    String   @map("lesson_id")
+  enrollmentId String  @map("enrollment_id")
+  completedAt DateTime @default(now()) @map("completed_at")
+
+  user       User       @relation(fields: [userId], references: [id])
+  lesson     Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("lesson_progress")
 }

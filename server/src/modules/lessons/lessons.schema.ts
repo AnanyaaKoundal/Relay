@@ -5,6 +5,7 @@ export const createLessonSchema = z.object({
   contentType: z.enum(["VIDEO", "TEXT", "QUIZ"]),
   orderIndex: z.coerce.number().int().min(0).optional(),
   durationSeconds: z.coerce.number().int().min(0).optional(),
+  isPreview: z.boolean().optional(),
 
   // Content data — provided inline, stored in separate content tables
   videoUrl: z.string().url().optional(),
@@ -27,6 +28,7 @@ export const updateLessonSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   orderIndex: z.coerce.number().int().min(0).optional(),
   durationSeconds: z.coerce.number().int().min(0).optional(),
+  isPreview: z.boolean().optional(),
   videoUrl: z.string().url().nullable().optional(),
   s3Key: z.string().nullable().optional(),
   body: z.string().optional(),

@@ -55,8 +55,11 @@ export function LearnerNavbar() {
           Relay
         </Link>
 
+        {/* Spacer */}
+        <div className="flex-1" />
+
         {/* Search */}
-        <form onSubmit={handleSearch} className="hidden flex-1 max-w-md md:block">
+        <form onSubmit={handleSearch} className="hidden w-full max-w-sm md:block">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -69,8 +72,11 @@ export function LearnerNavbar() {
           </div>
         </form>
 
+        {/* Spacer */}
+        <div className="flex-1" />
+
         {/* Right side */}
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2">
           {/* Notification bell */}
           <Button variant="ghost" size="icon" className="relative text-muted-foreground">
             <Bell className="size-4" />

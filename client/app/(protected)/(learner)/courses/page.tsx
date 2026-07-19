@@ -1,158 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
-import { Search, Users, Star } from "lucide-react";
-
-const allCourses = [
-  {
-    id: "1",
-    title: "Full-Stack Web Development with React & Node.js",
-    instructor: "Sarah Chen",
-    slug: "full-stack-web-development",
-    rating: 4.8,
-    students: 2400,
-    price: 49,
-    category: "Web Development",
-    difficulty: "Intermediate",
-    thumbnail: null,
-  },
-  {
-    id: "2",
-    title: "Advanced TypeScript Patterns",
-    instructor: "Alex Rivera",
-    slug: "advanced-typescript",
-    rating: 4.7,
-    students: 1200,
-    price: 39,
-    category: "Web Development",
-    difficulty: "Advanced",
-    thumbnail: null,
-  },
-  {
-    id: "3",
-    title: "System Design for Senior Engineers",
-    instructor: "James Wilson",
-    slug: "system-design",
-    rating: 4.9,
-    students: 3100,
-    price: 59,
-    category: "Architecture",
-    difficulty: "Advanced",
-    thumbnail: null,
-  },
-  {
-    id: "4",
-    title: "Machine Learning Fundamentals",
-    instructor: "Dr. Emily Park",
-    slug: "machine-learning",
-    rating: 4.9,
-    students: 3200,
-    price: 59,
-    category: "Data Science",
-    difficulty: "Intermediate",
-    thumbnail: null,
-  },
-  {
-    id: "5",
-    title: "Cloud Architecture with AWS",
-    instructor: "Michael Thompson",
-    slug: "cloud-architecture-aws",
-    rating: 4.7,
-    students: 1800,
-    price: 49,
-    category: "Cloud & DevOps",
-    difficulty: "Intermediate",
-    thumbnail: null,
-  },
-  {
-    id: "6",
-    title: "Design Systems at Scale",
-    instructor: "Lisa Chen",
-    slug: "design-systems",
-    rating: 4.8,
-    students: 950,
-    price: 0,
-    category: "Design",
-    difficulty: "Intermediate",
-    thumbnail: null,
-  },
-  {
-    id: "7",
-    title: "Rust for Systems Programming",
-    instructor: "David Kim",
-    slug: "rust-systems",
-    rating: 4.6,
-    students: 2100,
-    price: 39,
-    category: "Programming",
-    difficulty: "Advanced",
-    thumbnail: null,
-  },
-  {
-    id: "8",
-    title: "Data Engineering with Python",
-    instructor: "Anna Schmidt",
-    slug: "data-engineering-python",
-    rating: 4.5,
-    students: 1400,
-    price: 45,
-    category: "Data Science",
-    difficulty: "Intermediate",
-    thumbnail: null,
-  },
-  {
-    id: "9",
-    title: "iOS Development with Swift",
-    instructor: "Chris Martinez",
-    slug: "ios-development-swift",
-    rating: 4.7,
-    students: 2800,
-    price: 55,
-    category: "Mobile Development",
-    difficulty: "Beginner",
-    thumbnail: null,
-  },
-  {
-    id: "10",
-    title: "Python for Beginners",
-    instructor: "Rachel Green",
-    slug: "python-beginners",
-    rating: 4.8,
-    students: 5600,
-    price: 0,
-    category: "Programming",
-    difficulty: "Beginner",
-    thumbnail: null,
-  },
-  {
-    id: "11",
-    title: "Docker & Kubernetes Deep Dive",
-    instructor: "Tom Anderson",
-    slug: "docker-kubernetes",
-    rating: 4.6,
-    students: 1900,
-    price: 42,
-    category: "Cloud & DevOps",
-    difficulty: "Intermediate",
-    thumbnail: null,
-  },
-  {
-    id: "12",
-    title: "React Native Mobile Apps",
-    instructor: "Priya Patel",
-    slug: "react-native-mobile",
-    rating: 4.5,
-    students: 1600,
-    price: 35,
-    category: "Mobile Development",
-    difficulty: "Intermediate",
-    thumbnail: null,
-  },
-];
+import { browseCourses, type PublicCourse } from "@/services/course.service";
+import { Search, Users, Star, Loader2 } from "lucide-react";
 
 const categories = [
   "All",
@@ -167,24 +21,27 @@ const categories = [
 
 const difficulties = ["All", "Beginner", "Intermediate", "Advanced"];
 
-function CourseCatalogCard({ course }: { course: (typeof allCourses)[number] }) {
+const THUMBNAIL = "/thumbnail.avif";
+
+function CourseCatalogCard({ course }: { course: PublicCourse }) {
   return (
-    <Link href={`/courses/${course.slug}`} className="group block">
+    <Link href={`/courses/${course.id}`} className="group block">
       <div className="overflow-hidden rounded-xl border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
         <div className="relative aspect-video overflow-hidden bg-muted">
-          {course.thumbnail ? (
+          {course.thumbnailUrl ? (
             <Image
-              src={course.thumbnail}
+              src={course.thumbnailUrl}
               alt={course.title}
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
-            <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
-              <span className="text-3xl font-bold text-primary/20">
-                {course.title.charAt(0)}
-              </span>
-            </div>
+            <Image
+              src={THUMBNAIL}
+              alt={course.title}
+              fill
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+            />
           )}
           {course.difficulty && (
             <span className="absolute top-2 left-2 rounded-md bg-black/60 px-2 py-0.5 text-xs text-white">
@@ -192,7 +49,7 @@ function CourseCatalogCard({ course }: { course: (typeof allCourses)[number] }) 
             </span>
           )}
           <span className="absolute bottom-2 right-2 rounded-md bg-black/60 px-2 py-0.5 text-xs text-white font-medium">
-            {course.price === 0 ? "Free" : `$${course.price}`}
+            {Number(course.price) === 0 ? "Free" : `$${course.price}`}
           </span>
         </div>
 
@@ -200,18 +57,13 @@ function CourseCatalogCard({ course }: { course: (typeof allCourses)[number] }) 
           <h3 className="text-sm font-semibold leading-snug line-clamp-2 group-hover:text-primary transition-colors">
             {course.title}
           </h3>
-          <p className="text-xs text-muted-foreground">{course.instructor}</p>
+          <p className="text-xs text-muted-foreground">{course.instructor?.name ?? "Unknown instructor"}</p>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
-              <Star className="size-3 fill-amber-500 text-amber-500" />
-              {course.rating.toFixed(1)}
-            </span>
-            <span className="flex items-center gap-1">
               <Users className="size-3" />
-              {course.students >= 1000
-                ? `${(course.students / 1000).toFixed(1)}k`
-                : course.students}
+              {course._count.enrollments.toLocaleString()} enrolled
             </span>
+            <span>{course._count.chapters} chapters</span>
           </div>
         </div>
       </div>
@@ -222,24 +74,36 @@ function CourseCatalogCard({ course }: { course: (typeof allCourses)[number] }) 
 export default function CoursesPage() {
   const searchParams = useSearchParams();
   const initialSearch = searchParams.get("search") ?? "";
+  const initialCategory = searchParams.get("category") ?? "All";
 
   const [search, setSearch] = useState(initialSearch);
-  const [category, setCategory] = useState("All");
+  const [category, setCategory] = useState(initialCategory);
   const [difficulty, setDifficulty] = useState("All");
   const [priceFilter, setPriceFilter] = useState<"all" | "free" | "paid">("all");
+  const [courses, setCourses] = useState<PublicCourse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
 
-  const filtered = allCourses.filter((course) => {
-    const matchesSearch =
-      course.title.toLowerCase().includes(search.toLowerCase()) ||
-      course.instructor.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = category === "All" || course.category === category;
-    const matchesDifficulty = difficulty === "All" || course.difficulty === difficulty;
-    const matchesPrice =
-      priceFilter === "all" ||
-      (priceFilter === "free" && course.price === 0) ||
-      (priceFilter === "paid" && course.price > 0);
-    return matchesSearch && matchesCategory && matchesDifficulty && matchesPrice;
-  });
+  useEffect(() => {
+    setLoading(true);
+    const params: Parameters<typeof browseCourses>[0] = { limit: 50 };
+    if (search) params.search = search;
+    if (category !== "All") params.category = category;
+    if (difficulty !== "All") params.difficulty = difficulty;
+    if (priceFilter === "free") params.free = true;
+    if (priceFilter === "paid") params.free = false;
+
+    browseCourses(params)
+      .then((res) => {
+        setCourses(res.courses);
+        setTotal(res.pagination.total);
+      })
+      .catch(() => {
+        setCourses([]);
+        setTotal(0);
+      })
+      .finally(() => setLoading(false));
+  }, [search, category, difficulty, priceFilter]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8 space-y-6">
@@ -323,19 +187,26 @@ export default function CoursesPage() {
 
       {/* Results count */}
       <p className="text-sm text-muted-foreground">
-        {filtered.length} course{filtered.length !== 1 ? "s" : ""} found
+        {loading ? "Loading..." : `${total} course${total !== 1 ? "s" : ""} found`}
       </p>
 
       {/* Course grid */}
-      {filtered.length > 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-12 text-muted-foreground text-sm gap-2">
+          <Loader2 className="size-4 animate-spin" />
+          Loading courses...
+        </div>
+      ) : courses.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map((course) => (
+          {courses.map((course) => (
             <CourseCatalogCard key={course.id} course={course} />
           ))}
         </div>
       ) : (
         <div className="rounded-xl border bg-card p-12 text-center">
-          <p className="text-sm text-muted-foreground">No courses match your filters.</p>
+          <p className="text-sm text-muted-foreground">
+            No courses match your filters.
+          </p>
           <button
             type="button"
             onClick={() => {

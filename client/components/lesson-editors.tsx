@@ -203,7 +203,7 @@ export function VideoLessonEditor({
             <Input
               value={duration}
               onChange={(e) => setDuration(e.target.value)}
-              className="mt-1.5 max-w-[140px]"
+              className="mt-1.5 max-w-35"
               placeholder="0:00"
             />
           </div>
@@ -360,11 +360,10 @@ function ToolbarBtn({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`size-7 flex items-center justify-center rounded transition-colors ${
-        active
+      className={`size-7 flex items-center justify-center rounded transition-colors ${active
           ? "bg-primary/10 text-primary"
           : "text-muted-foreground hover:bg-background hover:text-foreground"
-      } ${disabled ? "opacity-30 pointer-events-none" : ""}`}
+        } ${disabled ? "opacity-30 pointer-events-none" : ""}`}
     >
       {children}
     </button>
@@ -423,10 +422,10 @@ export function TextLessonEditor({
             <label className="text-xs font-medium text-muted-foreground">Content</label>
             <div className="mt-1.5 space-y-2">
               <TipTapToolbar editor={editor} />
-              <div className="min-h-[240px] rounded-xl border bg-background focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-colors">
+              <div className="min-h-60 rounded-xl border bg-background focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-colors">
                 <EditorContent
                   editor={editor}
-                  className="prose prose-sm max-w-none p-4 [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[200px] [&_.ProseMirror]:placeholder:text-muted-foreground/40"
+                  className="prose prose-sm max-w-none p-4 [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-50 [&_.ProseMirror]:placeholder:text-muted-foreground/40"
                 />
               </div>
             </div>
@@ -502,11 +501,11 @@ export function QuizLessonEditor({
       prev.map((q) =>
         q.id === qId
           ? {
-              ...q,
-              options: q.options.map((o) =>
-                o.id === oId ? { ...o, text } : o
-              ),
-            }
+            ...q,
+            options: q.options.map((o) =>
+              o.id === oId ? { ...o, text } : o
+            ),
+          }
           : q
       )
     );

@@ -190,11 +190,12 @@ export default function StudioCoursesPage() {
                       className="object-cover"
                     />
                   ) : (
-                    <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
-                      <span className="text-lg font-bold text-primary/30">
-                        {course.title.charAt(0)}
-                      </span>
-                    </div>
+                    <Image
+                      src="/thumbnail.avif"
+                      alt=""
+                      fill
+                      className="object-cover"
+                    />
                   )}
                 </Link>
 

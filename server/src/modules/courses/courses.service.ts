@@ -84,6 +84,7 @@ export async function getPublicCourse(slug: string) {
               title: true,
               contentType: true,
               durationSeconds: true,
+              isPreview: true,
             },
           },
         },

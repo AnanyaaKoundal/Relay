@@ -87,6 +87,7 @@ export async function createLesson(
     contentType: "VIDEO" | "TEXT" | "QUIZ";
     orderIndex?: number;
     durationSeconds?: number;
+    isPreview?: boolean;
     videoUrl?: string;
     s3Key?: string;
     body?: string;
@@ -136,6 +137,7 @@ export async function createLesson(
       orderIndex: data.orderIndex ?? (maxOrder._max.orderIndex ?? -1) + 1,
       durationSeconds:
         data.contentType === "VIDEO" ? (data.durationSeconds ?? null) : null,
+      isPreview: data.isPreview ?? false,
       chapterId,
     },
   });
@@ -150,6 +152,7 @@ export async function updateLesson(
     title?: string;
     orderIndex?: number;
     durationSeconds?: number;
+    isPreview?: boolean;
     videoUrl?: string | null;
     s3Key?: string | null;
     body?: string;
@@ -194,6 +197,7 @@ export async function updateLesson(
   if (data.orderIndex !== undefined) metaUpdate.orderIndex = data.orderIndex;
   if (data.durationSeconds !== undefined)
     metaUpdate.durationSeconds = data.durationSeconds;
+  if (data.isPreview !== undefined) metaUpdate.isPreview = data.isPreview;
 
   if (Object.keys(metaUpdate).length > 0) {
     await prisma.lesson.update({ where: { id: lessonId }, data: metaUpdate });

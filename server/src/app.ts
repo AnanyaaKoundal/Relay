@@ -6,6 +6,7 @@ import instructorRoutes from "./modules/instructor/instructor.routes.js";
 import coursesRoutes from "./modules/courses/courses.routes.js";
 import chaptersRoutes from "./modules/chapters/chapters.routes.js";
 import lessonsRoutes from "./modules/lessons/lessons.routes.js";
+import enrollmentsRoutes from "./modules/enrollments/enrollments.routes.js";
 import { requestLogger } from "./middleware/request-logger.js";
 import { errorHandler } from "./middleware/error-handler.js";
 
@@ -26,6 +27,7 @@ app.use("/instructor", instructorRoutes);        // onboarding only
 app.use("/courses", coursesRoutes);              // public browse + instructor CRUD
 app.use("/chapters", chaptersRoutes);            // chapter management (instructor)
 app.use("/lessons", lessonsRoutes);              // lesson management (instructor)
+app.use("/enrollments", enrollmentsRoutes);      // enrollment + lesson content + progress
 
 app.use(errorHandler);
 
