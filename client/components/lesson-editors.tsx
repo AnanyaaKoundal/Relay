@@ -13,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Upload,
   X,
   Plus,
   Trash2,
@@ -32,7 +31,13 @@ import {
   Code,
   Undo,
   Redo,
+  Loader2,
 } from "lucide-react";
+import { VideoUploader, useVideoDuration } from "@/components/video-uploader";
+import { presignUpload, completeUpload, uploadFileWithProgress } from "@/services/upload.service";
+import { resolveUrl } from "@/lib/utils";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
 
 /* ─── Shared Types ─── */
 export type LessonType = "VIDEO" | "TEXT" | "QUIZ";
@@ -75,61 +80,69 @@ export function VideoLessonEditor({
   onSave,
   initial,
   lessonTitle,
+  lessonId,
 }: {
   open: boolean;
   onClose: () => void;
   onSave: (data: VideoContent, title: string) => void;
   initial: VideoContent;
   lessonTitle: string;
+  lessonId: string;
 }) {
   const [title, setTitle] = useState(lessonTitle);
-  const [videoUrl, setVideoUrl] = useState(initial.videoUrl);
-  const [duration, setDuration] = useState(
-    initial.durationSeconds != null ? formatDurationInput(initial.durationSeconds) : ""
-  );
-  const [resources, setResources] = useState(initial.resources);
-  const [newResName, setNewResName] = useState("");
-  const [newResUrl, setNewResUrl] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "done">("idle");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const autoDuration = useVideoDuration(file);
 
-  function formatDurationInput(s: number) {
+  const hasExistingVideo = !!initial.videoUrl;
+  const canSave = hasExistingVideo || (file && uploadStatus === "idle");
+  const isUploading = uploadStatus === "uploading";
+
+  function formatDuration(s: number) {
     const m = Math.floor(s / 60);
     const sec = s % 60;
     return `${m}:${sec.toString().padStart(2, "0")}`;
   }
 
-  function parseDuration(str: string): number | null {
-    if (!str) return null;
-    const parts = str.split(":");
-    if (parts.length === 2) {
-      const m = parseInt(parts[0], 10);
-      const s = parseInt(parts[1], 10);
-      if (!isNaN(m) && !isNaN(s)) return m * 60 + s;
-    }
-    return null;
-  }
-
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setVideoUrl(url);
-      setTitle(file.name.replace(/\.[^.]+$/, ""));
+  function handleFileSelect(f: File) {
+    setFile(f);
+    setUploadStatus("idle");
+    setUploadProgress(0);
+    if (!title || title === lessonTitle) {
+      setTitle(f.name.replace(/\.[^.]+$/, ""));
     }
   }
 
-  function handleAddResource() {
-    if (newResName.trim() && newResUrl.trim()) {
-      setResources((prev) => [...prev, { name: newResName.trim(), url: newResUrl.trim() }]);
-      setNewResName("");
-      setNewResUrl("");
+  async function handleUploadAndSave() {
+    if (!file || saving) return;
+    setSaving(true);
+    try {
+      setUploadStatus("uploading");
+      setUploadProgress(0);
+
+      const { uploadUrl, fileKey } = await presignUpload(file.name, file.type, lessonId);
+      await uploadFileWithProgress(API_URL, uploadUrl, file, setUploadProgress);
+      await completeUpload(lessonId, fileKey);
+
+      setUploadStatus("done");
+      onSave(
+        { videoUrl: `${API_URL}/s3/${fileKey}`, durationSeconds: autoDuration, resources: [] },
+        title.trim() || lessonTitle,
+      );
+      onClose();
+    } catch {
+      setUploadStatus("idle");
+    } finally {
+      setSaving(false);
     }
   }
 
   function handleSave() {
     onSave(
-      { videoUrl, durationSeconds: parseDuration(duration), resources },
-      title.trim() || lessonTitle
+      { videoUrl: initial.videoUrl, durationSeconds: initial.durationSeconds, resources: [] },
+      title.trim() || lessonTitle,
     );
     onClose();
   }
@@ -140,7 +153,7 @@ export function VideoLessonEditor({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Video className="size-4 text-blue-500" />
-            Edit Video Lesson
+            {hasExistingVideo ? "Edit Video Lesson" : "New Video Lesson"}
           </DialogTitle>
         </DialogHeader>
 
@@ -155,109 +168,57 @@ export function VideoLessonEditor({
             />
           </div>
 
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Video</label>
-            <div
-              onClick={() => fileRef.current?.click()}
-              className="mt-1.5 flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all"
-            >
-              {videoUrl ? (
-                <div className="text-center space-y-2">
-                  <CheckCircle2 className="size-8 mx-auto text-emerald-500" />
-                  <p className="text-sm font-medium">Video selected</p>
-                  <p className="text-xs text-muted-foreground truncate max-w-xs">{videoUrl}</p>
-                  <p className="text-xs text-primary hover:underline">Click to replace</p>
-                </div>
-              ) : (
-                <div className="text-center space-y-2">
-                  <Upload className="size-8 mx-auto text-muted-foreground/40" />
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Click to upload a video
-                  </p>
-                  <p className="text-xs text-muted-foreground/60">
-                    MP4, WebM, or MOV up to 2GB
-                  </p>
-                </div>
-              )}
-            </div>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="video/*"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-
-            {videoUrl && (
-              <div className="mt-3 rounded-lg overflow-hidden bg-black/5">
-                <video src={videoUrl} controls className="w-full max-h-48" />
+          {hasExistingVideo ? (
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Video</label>
+              <div className="mt-1.5 rounded-xl overflow-hidden bg-black/5">
+                <video src={resolveUrl(initial.videoUrl) ?? ""} controls className="w-full max-h-48" />
               </div>
-            )}
-          </div>
-
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">
-              <Clock className="inline size-3 mr-1" />
-              Duration (mm:ss)
-            </label>
-            <Input
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              className="mt-1.5 max-w-35"
-              placeholder="0:00"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Resources</label>
-            <div className="mt-1.5 space-y-2">
-              {resources.map((r, i) => (
-                <div key={i} className="flex items-center gap-2 rounded-lg border px-3 py-2">
-                  <LinkIcon className="size-3.5 text-muted-foreground shrink-0" />
-                  <span className="flex-1 text-sm truncate">{r.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => setResources((prev) => prev.filter((_, j) => j !== i))}
-                    className="shrink-0 text-muted-foreground/40 hover:text-red-500"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
-                </div>
-              ))}
-              <div className="flex gap-2">
-                <Input
-                  value={newResName}
-                  onChange={(e) => setNewResName(e.target.value)}
-                  placeholder="Resource name"
-                  className="h-8 text-xs"
-                  onKeyDown={(e) => e.key === "Enter" && handleAddResource()}
-                />
-                <Input
-                  value={newResUrl}
-                  onChange={(e) => setNewResUrl(e.target.value)}
-                  placeholder="URL"
-                  className="h-8 text-xs"
-                  onKeyDown={(e) => e.key === "Enter" && handleAddResource()}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddResource}
-                  className="shrink-0"
-                >
-                  <Plus className="size-3" />
-                </Button>
-              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Video cannot be replaced. Delete this lesson and create a new one to upload a different video.
+              </p>
             </div>
-          </div>
+          ) : (
+            <VideoUploader
+              file={file}
+              status={uploadStatus}
+              progress={uploadProgress}
+              onFileSelect={handleFileSelect}
+            />
+          )}
+
+          {!hasExistingVideo && autoDuration != null && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Clock className="size-3" />
+              Duration: {formatDuration(autoDuration)}
+            </div>
+          )}
+          {hasExistingVideo && initial.durationSeconds != null && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Clock className="size-3" />
+              Duration: {formatDuration(initial.durationSeconds)}
+            </div>
+          )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={isUploading}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>Save Lesson</Button>
+          {hasExistingVideo ? (
+            <Button onClick={handleSave}>Save</Button>
+          ) : (
+            <Button onClick={handleUploadAndSave} disabled={!canSave || isUploading || saving}>
+              {isUploading ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                "Upload & Save"
+              )}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

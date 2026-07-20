@@ -980,6 +980,7 @@ export default function CourseBuilderWorkspace() {
           onSave={(data, t) => handleSaveContent("VIDEO", data, t)}
           initial={(editingLesson.content as VideoContent) ?? { videoUrl: "", durationSeconds: null, resources: [] }}
           lessonTitle={editingLesson.title}
+          lessonId={editingLesson.id}
         />
       )}
       {editingLesson && editingLesson.contentType === "TEXT" && (

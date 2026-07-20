@@ -8,7 +8,7 @@ export const createLessonSchema = z.object({
   isPreview: z.boolean().optional(),
 
   // Content data — provided inline, stored in separate content tables
-  videoUrl: z.string().url().optional(),
+  videoUrl: z.string().optional(),
   s3Key: z.string().optional(),
   body: z.string().optional(), // for TEXT content
   questions: z
@@ -20,7 +20,6 @@ export const createLessonSchema = z.object({
         explanation: z.string().optional(),
       }),
     )
-    .min(1)
     .optional(), // for QUIZ content
 });
 

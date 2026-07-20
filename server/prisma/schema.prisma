@@ -128,6 +128,8 @@ model VideoContent {
   id              String  @id @default(uuid())
   s3Key           String  @map("s3_key")
   videoUrl        String? @map("video_url")
+  hlsUrl          String? @map("hls_url")
+  processingStatus String @default("PENDING") @map("processing_status")
   durationSeconds Int?    @map("duration_seconds")
 
   @@map("video_contents")

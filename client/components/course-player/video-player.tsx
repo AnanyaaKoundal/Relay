@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertCircle } from "lucide-react";
+import { resolveUrl } from "@/lib/utils";
 
 type VideoPlayerProps = {
   videoUrl: string | null;
@@ -8,7 +9,9 @@ type VideoPlayerProps = {
 };
 
 export function VideoPlayer({ videoUrl, title }: VideoPlayerProps) {
-  if (!videoUrl) {
+  const resolved = resolveUrl(videoUrl);
+
+  if (!resolved) {
     return (
       <div className="flex flex-col items-center justify-center aspect-video rounded-xl bg-muted p-8 text-center">
         <AlertCircle className="size-8 text-muted-foreground/50 mb-3" />
@@ -22,7 +25,7 @@ export function VideoPlayer({ videoUrl, title }: VideoPlayerProps) {
   return (
     <div className="relative w-full overflow-hidden rounded-xl bg-black">
       <video
-        src={videoUrl}
+        src={resolved}
         controls
         className="w-full aspect-video"
         title={title}
