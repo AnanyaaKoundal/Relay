@@ -75,6 +75,8 @@ export type LessonContent = {
   isPreview: boolean;
   content: {
     videoUrl?: string;
+    hlsUrl?: string;
+    processingStatus?: string;
     body?: string;
     questions?: {
       question: string;

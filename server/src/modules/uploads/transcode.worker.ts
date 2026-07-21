@@ -2,10 +2,13 @@ import { Worker } from "bullmq";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { readFile, unlink, mkdir, writeFile } from "fs/promises";
-import { join } from "path";
+import { join, relative as pathRelative } from "path";
 import { tmpdir } from "os";
 import { randomUUID } from "crypto";
-import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+const ffmpegPath: string = require("ffmpeg-static");
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 import s3, { S3_BUCKET } from "../../lib/s3.js";
 import { prisma } from "../../lib/prisma.js";
 import { logger } from "../../utils/logger.js";
@@ -19,8 +22,10 @@ const QUALITIES = [
 ];
 
 async function downloadFile(key: string, dest: string): Promise<void> {
-  const response = await s3.send(new GetObjectCommand({ Bucket: S3_BUCKET, Key: key }));
-  const body = await response.Body!.transformToByteArray();
+  const url = `http://localhost:${process.env.PORT ?? 5000}/s3/${key}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+  const body = new Uint8Array(await response.arrayBuffer());
   await writeFile(dest, body);
 }
 
@@ -43,7 +48,7 @@ async function uploadDir(localDir: string, s3Prefix: string): Promise<void> {
   const allFiles = walkDir(localDir);
   await Promise.all(
     allFiles.map(async (filePath) => {
-      const relative = filePath.replace(localDir, "").replace(/\\/g, "/");
+      const relative = pathRelative(localDir, filePath).replace(/\\/g, "/");
       const key = `${s3Prefix}${relative}`;
       const body = await readFile(filePath);
       const contentType = filePath.endsWith(".m3u8")
@@ -51,6 +56,8 @@ async function uploadDir(localDir: string, s3Prefix: string): Promise<void> {
         : filePath.endsWith(".ts")
           ? "video/mp2t"
           : "application/octet-stream";
+
+      logger.info(`Uploading ${key} (${body.length} bytes)`);
       await s3.send(new PutObjectCommand({ Bucket: S3_BUCKET, Key: key, Body: body, ContentType: contentType }));
     }),
   );
@@ -60,7 +67,7 @@ function runFfmpeg(input: string, outputDir: string, quality: (typeof QUALITIES)
   return new Promise((resolve, reject) => {
     const outputPath = join(outputDir, "index.m3u8");
     const proc = execFile(
-      "ffmpeg",
+      ffmpegPath,
       [
         "-i", input,
         "-c:v", "libx264",
@@ -88,10 +95,12 @@ function runFfmpeg(input: string, outputDir: string, quality: (typeof QUALITIES)
 }
 
 function buildMasterPlaylist(qualities: { label: string; dir: string }[]): string {
-  let master = "#EXTM3U\n#EXT-X-VERSION:3\n\n";
+  let master = "#EXTM3U\n#EXT-X-VERSION:3\n";
   for (const q of qualities) {
-    master += `#EXT-X-STREAM-INF:BANDWIDTH=${q.label === "1080p" ? "5000000" : q.label === "720p" ? "2500000" : "1000000"},RESOLUTION=${q.label === "1080p" ? "1920x1080" : q.label === "720p" ? "1280x720" : "854x480"}\n`;
-    master += `${q.label}/index.m3u8\n\n`;
+    const bw = q.label === "1080p" ? "5000000" : q.label === "720p" ? "2500000" : "1000000";
+    const res = q.label === "1080p" ? "1920x1080" : q.label === "720p" ? "1280x720" : "854x480";
+    master += `#EXT-X-STREAM-INF:BANDWIDTH=${bw},RESOLUTION=${res}\n`;
+    master += `${q.label}/index.m3u8\n`;
   }
   return master;
 }
@@ -124,7 +133,7 @@ async function transcode(data: { videoContentId: string; fileKey: string; lesson
     await writeFile(join(hlsDir, "master.m3u8"), master);
 
     // Upload to S3
-    const s3Prefix = data.fileKey.replace(/\/raw\/.*$/, "/hls/");
+    const s3Prefix = data.fileKey.replace(/\/raw\/[^/]+$/, "/hls/");
     logger.info(`Uploading HLS output to ${s3Prefix}`);
     await uploadDir(hlsDir, s3Prefix);
 

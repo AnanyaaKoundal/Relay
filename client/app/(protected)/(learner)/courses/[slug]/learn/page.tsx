@@ -171,6 +171,8 @@ export default function LearnPage() {
                 {lessonContent.contentType === "VIDEO" && (
                   <VideoPlayer
                     videoUrl={lessonContent.content?.videoUrl ?? null}
+                    hlsUrl={lessonContent.content?.hlsUrl ?? null}
+                    processingStatus={lessonContent.content?.processingStatus}
                     title={lessonContent.title}
                   />
                 )}
