@@ -26,16 +26,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return data as T;
 }
 
-/* ─── Types ─── */
-
-export type PresignResponse = {
-  uploadUrl: string;
-  fileKey: string;
-};
-
-export type CompleteResponse = {
-  message: string;
-};
+import type { PresignResponse, CompleteResponse } from "@/types/upload.types";
 
 /* ─── API ─── */
 

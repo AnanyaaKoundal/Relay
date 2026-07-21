@@ -1,4 +1,12 @@
-import type { LessonType } from "@/components/lesson-editors";
+import type {
+  LessonType,
+  VideoContentData,
+  TextContentData,
+  QuizContentData,
+  LessonItem,
+  CreateLessonInput,
+  UpdateLessonInput,
+} from "@/types/lesson.types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
 
@@ -27,71 +35,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   return data as T;
 }
-
-/* ─── Types ─── */
-
-export type VideoContentData = {
-  videoUrl: string;
-  durationSeconds: number | null;
-  s3Key: string;
-};
-
-export type TextContentData = {
-  body: string;
-};
-
-export type QuizContentData = {
-  questions: {
-    question: string;
-    options: string[];
-    correctAnswer: number;
-    explanation?: string;
-  }[];
-};
-
-export type LessonItem = {
-  id: string;
-  title: string;
-  contentType: LessonType;
-  contentId: string;
-  orderIndex: number;
-  durationSeconds: number | null;
-  isPreview: boolean;
-  chapterId: string;
-  content: VideoContentData | TextContentData | QuizContentData | null;
-};
-
-export type CreateLessonInput = {
-  title: string;
-  contentType: LessonType;
-  durationSeconds?: number | null;
-  isPreview?: boolean;
-  videoUrl?: string;
-  s3Key?: string;
-  body?: string;
-  questions?: {
-    question: string;
-    options: string[];
-    correctAnswer: number;
-    explanation?: string;
-  }[];
-};
-
-export type UpdateLessonInput = {
-  title?: string;
-  orderIndex?: number;
-  durationSeconds?: number | null;
-  isPreview?: boolean;
-  videoUrl?: string | null;
-  s3Key?: string | null;
-  body?: string;
-  questions?: {
-    question: string;
-    options: string[];
-    correctAnswer: number;
-    explanation?: string;
-  }[];
-};
 
 /* ─── API ─── */
 

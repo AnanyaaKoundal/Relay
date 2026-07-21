@@ -1,4 +1,5 @@
-import type { LessonType } from "@/components/lesson-editors";
+import type { LessonType } from "@/types/lesson.types";
+import type { ChapterItem, ChapterLessonItem } from "@/types/chapter.types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
 
@@ -27,28 +28,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   return data as T;
 }
-
-/* ─── Types ─── */
-
-export type ChapterItem = {
-  id: string;
-  title: string;
-  orderIndex: number;
-  courseId: string;
-  lessons: LessonItem[];
-};
-
-export type LessonItem = {
-  id: string;
-  title: string;
-  contentType: LessonType;
-  contentId: string;
-  orderIndex: number;
-  durationSeconds: number | null;
-  isPreview: boolean;
-  chapterId: string;
-  content: Record<string, unknown> | null;
-};
 
 /* ─── API ─── */
 

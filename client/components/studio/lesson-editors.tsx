@@ -33,38 +33,20 @@ import {
   Redo,
   Loader2,
 } from "lucide-react";
-import { VideoUploader, useVideoDuration } from "@/components/video-uploader";
+import { VideoUploader, useVideoDuration } from "@/components/studio/video-uploader";
 import { presignUpload, completeUpload, uploadFileWithProgress } from "@/services/upload.service";
 import { resolveUrl } from "@/lib/utils";
+import type {
+  LessonType,
+  VideoContent,
+  TextContent,
+  QuizOption,
+  QuizQuestion,
+  QuizContent,
+  LessonContent,
+} from "@/types/lesson.types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
-
-/* ─── Shared Types ─── */
-export type LessonType = "VIDEO" | "TEXT" | "QUIZ";
-
-export type VideoContent = {
-  videoUrl: string;
-  durationSeconds: number | null;
-  resources: { name: string; url: string }[];
-};
-
-export type TextContent = {
-  body: string;
-};
-
-export type QuizOption = { id: string; text: string };
-export type QuizQuestion = {
-  id: string;
-  question: string;
-  options: QuizOption[];
-  correctOptionId: string;
-  explanation: string;
-};
-export type QuizContent = {
-  questions: QuizQuestion[];
-};
-
-export type LessonContent = VideoContent | TextContent | QuizContent;
 
 let qId = 0;
 function qid() {

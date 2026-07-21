@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { RelayPattern } from "@/components/relay-pattern";
-import { CoursePreviewCard } from "@/components/course-preview-card";
+import { RelayPattern } from "@/components/auth/relay-pattern";
+import { CoursePreviewCard } from "@/components/auth/course-preview-card";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();

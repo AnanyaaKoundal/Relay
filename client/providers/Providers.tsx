@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { AuthProvider } from "@/providers/AuthProvider";
-import { ConfirmProvider } from "@/components/confirm-modal";
+import { ConfirmProvider } from "@/components/shared/confirm-modal";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (

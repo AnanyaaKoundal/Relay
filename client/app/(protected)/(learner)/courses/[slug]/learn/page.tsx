@@ -6,14 +6,13 @@ import {
   checkEnrollment,
   getLessonContent,
   markLessonComplete,
-  type EnrollmentDetail,
-  type LessonContent,
 } from "@/services/enrollment.service";
-import { ChapterSidebar } from "@/components/course-player/chapter-sidebar";
-import { CourseNavBar } from "@/components/course-player/course-nav-bar";
-import { VideoPlayer } from "@/components/course-player/video-player";
-import { TextRenderer } from "@/components/course-player/text-renderer";
-import { QuizPlayer } from "@/components/course-player/quiz-player";
+import type { EnrollmentDetail, EnrollmentLessonContent } from "@/types/enrollment.types";
+import { ChapterSidebar } from "@/components/learner/course-player/chapter-sidebar";
+import { CourseNavBar } from "@/components/learner/course-player/course-nav-bar";
+import { VideoPlayer } from "@/components/learner/course-player/VideoPlayer";
+import { TextRenderer } from "@/components/learner/course-player/text-renderer";
+import { QuizPlayer } from "@/components/learner/course-player/quiz-player";
 import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function LearnPage() {
@@ -23,7 +22,7 @@ export default function LearnPage() {
 
   const [enrollment, setEnrollment] = useState<EnrollmentDetail | null>(null);
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
-  const [lessonContent, setLessonContent] = useState<LessonContent | null>(null);
+  const [lessonContent, setLessonContent] = useState<EnrollmentLessonContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [contentLoading, setContentLoading] = useState(false);
   const [completing, setCompleting] = useState(false);

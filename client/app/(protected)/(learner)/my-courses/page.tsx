@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CourseCard } from "@/components/course-card";
+import { CourseCard } from "@/components/learner/course-card";
 import {
   listEnrolledCourses,
-  type Enrollment,
 } from "@/services/enrollment.service";
+import type { Enrollment } from "@/types/enrollment.types";
 import { BookOpen, Loader2 } from "lucide-react";
 
 export default function MyCoursesPage() {

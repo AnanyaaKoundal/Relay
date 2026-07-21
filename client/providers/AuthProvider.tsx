@@ -1,20 +1,8 @@
 "use client";
 
 import { createContext, useState, useEffect, useCallback, type ReactNode } from "react";
-import type { User, UpgradeToInstructorPayload } from "@/types/auth.types";
+import type { User, UpgradeToInstructorPayload, AuthContextType } from "@/types/auth.types";
 import { loginUser, registerUser, getCurrentUser, logoutUser, onboardInstructor } from "@/services/auth.service";
-
-export type AuthContextType = {
-  user: User | null;
-  loading: boolean;
-  login: (data: { email: string; password: string }) => Promise<User>;
-  signup: (data: { name: string; email: string; password: string }) => Promise<User>;
-  logout: () => void;
-  upgradeToInstructor: (data: UpgradeToInstructorPayload) => Promise<User>;
-  isAuthenticated: boolean;
-  isAdmin: boolean;
-  isInstructor: boolean;
-};
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 

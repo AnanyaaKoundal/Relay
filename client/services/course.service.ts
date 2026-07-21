@@ -1,4 +1,12 @@
-import type { CourseListItem, CourseDetail, CreateCourseInput, UpdateCourseInput } from "@/types/course.types";
+import type {
+  CourseListItem,
+  CourseDetail,
+  CreateCourseInput,
+  UpdateCourseInput,
+  PublicCourse,
+  PublicCourseDetail,
+  BrowseResult,
+} from "@/types/course.types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
 
@@ -28,43 +36,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return data as T;
 }
 
-/* ─── Public ─── */
-
-export type PublicCourse = {
-  id: string;
-  title: string;
-  description: string;
-  thumbnailUrl: string | null;
-  category: string | null;
-  price: number;
-  difficulty: string | null;
-  status: string;
-  publishedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  instructor: { id: string; name: string } | null;
-  _count: { chapters: number; enrollments: number };
-};
-
-export type PublicCourseDetail = PublicCourse & {
-  chapters: {
-    id: string;
-    title: string;
-    orderIndex: number;
-    lessons: {
-      id: string;
-      title: string;
-      contentType: string;
-      durationSeconds: number | null;
-      isPreview: boolean;
-    }[];
-  }[];
-};
-
-export type BrowseResult = {
-  courses: PublicCourse[];
-  pagination: { page: number; limit: number; total: number; pages: number };
-};
+/* ─── API ─── */
 
 export async function browseCourses(params?: {
   search?: string;

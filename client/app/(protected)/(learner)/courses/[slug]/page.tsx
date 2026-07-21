@@ -6,14 +6,14 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   getPublicCourse,
-  type PublicCourseDetail,
 } from "@/services/course.service";
+import type { PublicCourseDetail } from "@/types/course.types";
 import {
   checkEnrollment,
   enrollInCourse,
-  type EnrollmentDetail,
 } from "@/services/enrollment.service";
-import { CurriculumAccordion } from "@/components/course-player/curriculum-accordion";
+import type { EnrollmentDetail } from "@/types/enrollment.types";
+import { CurriculumAccordion } from "@/components/learner/course-player/curriculum-accordion";
 import { Users, BookOpen, Clock, Loader2, CheckCircle2 } from "lucide-react";
 
 export default function CourseDetailPage() {

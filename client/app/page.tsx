@@ -9,7 +9,7 @@ import { Community } from "@/components/landing/community";
 import { InstructorCTA } from "@/components/landing/instructor-cta";
 import { FinalCTA } from "@/components/landing/final-cta";
 import { FooterSection } from "@/components/landing/footer-section";
-import { FadeInSection } from "@/components/fade-in-wrapper";
+import { FadeInSection } from "@/components/shared/fade-in-wrapper";
 
 export default function LandingPage() {
   return (

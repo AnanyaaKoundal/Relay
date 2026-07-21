@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
-import { CourseCard } from "@/components/course-card";
-import { browseCourses, type PublicCourse } from "@/services/course.service";
+import { CourseCard } from "@/components/learner/course-card";
+import { browseCourses } from "@/services/course.service";
+import type { PublicCourse } from "@/types/course.types";
 import {
   listEnrolledCourses,
-  type Enrollment,
 } from "@/services/enrollment.service";
+import type { Enrollment } from "@/types/enrollment.types";
 import { ArrowRight, BookOpen, Sparkles, Clock, Loader2 } from "lucide-react";
 
 function SectionHeader({

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { getMyCourses, deleteCourse } from "@/services/course.service";
-import { useConfirm } from "@/components/confirm-modal";
+import { useConfirm } from "@/components/shared/confirm-modal";
 import type { CourseListItem } from "@/types/course.types";
 import {
   Plus,

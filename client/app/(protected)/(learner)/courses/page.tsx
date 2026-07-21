@@ -5,7 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
-import { browseCourses, type PublicCourse } from "@/services/course.service";
+import { browseCourses } from "@/services/course.service";
+import type { PublicCourse } from "@/types/course.types";
 import { Search, Users, Star, Loader2 } from "lucide-react";
 
 const categories = [

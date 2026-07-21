@@ -1,6 +1,6 @@
 "use client";
 
-import { LearnerNavbar } from "@/components/learner-navbar";
+import { LearnerNavbar } from "@/components/learner/learner-navbar";
 
 export default function LearnerLayout({ children }: { children: React.ReactNode }) {
   return (
