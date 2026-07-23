@@ -76,8 +76,10 @@ export async function getPublicCourse(slug: string) {
       },
       chapters: {
         orderBy: { orderIndex: "asc" },
+        where: { lessons: { some: { status: "PUBLISHED" } } },
         include: {
           lessons: {
+            where: { status: "PUBLISHED" },
             orderBy: { orderIndex: "asc" },
             select: {
               id: true,
@@ -117,7 +119,20 @@ export async function listInstructorCourses(instructorId: string) {
       status: true,
       createdAt: true,
       updatedAt: true,
-      _count: { select: { chapters: true, enrollments: true } },
+      _count: {
+        select: {
+          chapters: true,
+          enrollments: true,
+        },
+      },
+      chapters: {
+        select: {
+          lessons: {
+            where: { status: "DRAFT" },
+            select: { id: true },
+          },
+        },
+      },
     },
   });
 }
@@ -189,7 +204,60 @@ export async function updateCourse(
   }
 
   const updateData: Record<string, unknown> = { ...data };
+
   if (data.status === "PUBLISHED" && existing.status !== "PUBLISHED") {
+    // Validate: at least 1 chapter with 1 lesson
+    const chapterCount = await prisma.chapter.count({
+      where: { courseId, lessons: { some: {} } },
+    });
+    if (chapterCount === 0) {
+      throw Object.assign(
+        new Error("You need at least one chapter with one lesson before publishing"),
+        { statusCode: 400 },
+      );
+    }
+
+    // Validate: no PROCESSING videos
+    const processingLessons = await prisma.lesson.findMany({
+      where: {
+        chapter: { courseId },
+        contentType: "VIDEO",
+        contentId: { not: "" },
+      },
+      select: { id: true, contentId: true },
+    });
+
+    for (const pl of processingLessons) {
+      const vc = await prisma.videoContent.findUnique({
+        where: { id: pl.contentId },
+        select: { processingStatus: true },
+      });
+      if (vc && vc.processingStatus === "PROCESSING") {
+        throw Object.assign(
+          new Error("Cannot publish while videos are still processing"),
+          { statusCode: 400 },
+        );
+      }
+    }
+
+    // Auto-publish all DRAFT lessons
+    await prisma.lesson.updateMany({
+      where: { chapter: { courseId }, status: "DRAFT" },
+      data: { status: "PUBLISHED", publishedContentId: null },
+    });
+
+    // Auto-apply chapter titleDrafts
+    const chaptersWithDraft = await prisma.chapter.findMany({
+      where: { courseId, titleDraft: { not: null } },
+      select: { id: true, titleDraft: true },
+    });
+    for (const ch of chaptersWithDraft) {
+      await prisma.chapter.update({
+        where: { id: ch.id },
+        data: { title: ch.titleDraft!, titleDraft: null },
+      });
+    }
+
     updateData.publishedAt = new Date();
   }
 

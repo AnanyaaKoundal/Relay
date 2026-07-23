@@ -59,3 +59,10 @@ export async function reorderChapters(courseId: string, chapterIds: string[]): P
     body: JSON.stringify({ chapterIds }),
   });
 }
+
+export async function publishChapterTitles(courseIds: string[]): Promise<{ published: string[] }> {
+  return request<{ published: string[] }>("/chapters/publish-title", {
+    method: "POST",
+    body: JSON.stringify({ chapterIds: courseIds }),
+  });
+}

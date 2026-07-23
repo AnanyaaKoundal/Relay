@@ -137,7 +137,7 @@ export function TextLessonEditor({
 }: {
   open: boolean;
   onClose: () => void;
-  onSave: (data: TextContent, title: string) => void;
+  onSave: (data: TextContent, title: string) => void | Promise<void>;
   initial: TextContent;
   lessonTitle: string;
 }) {
@@ -149,9 +149,9 @@ export function TextLessonEditor({
     immediatelyRender: false,
   });
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!editor) return;
-    onSave({ body: editor.getHTML() }, title.trim() || lessonTitle);
+    await onSave({ body: editor.getHTML() }, title.trim() || lessonTitle);
     onClose();
   }, [editor, onSave, onClose, title, lessonTitle]);
 

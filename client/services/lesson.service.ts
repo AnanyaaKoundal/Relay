@@ -70,3 +70,17 @@ export async function reorderLessons(chapterId: string, lessonIds: string[]): Pr
     body: JSON.stringify({ lessonIds }),
   });
 }
+
+export async function publishLessons(lessonIds: string[]): Promise<{ published: string[] }> {
+  return request<{ published: string[] }>("/lessons/publish", {
+    method: "POST",
+    body: JSON.stringify({ lessonIds }),
+  });
+}
+
+export async function unpublishLessons(lessonIds: string[]): Promise<{ unpublished: string[] }> {
+  return request<{ unpublished: string[] }>("/lessons/unpublish", {
+    method: "POST",
+    body: JSON.stringify({ lessonIds }),
+  });
+}

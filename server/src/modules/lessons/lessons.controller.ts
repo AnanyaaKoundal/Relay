@@ -3,6 +3,8 @@ import {
   createLessonSchema,
   updateLessonSchema,
   reorderLessonsSchema,
+  publishLessonsSchema,
+  unpublishLessonsSchema,
 } from "./lessons.schema.js";
 import * as lessonsService from "./lessons.service.js";
 import { logger } from "../../utils/logger.js";
@@ -133,6 +135,56 @@ export async function reorderLessons(req: Request, res: Response) {
       return;
     }
     logger.error("Failed to reorder lessons", { error: error.message });
+    res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
+export async function publishLessons(req: Request, res: Response) {
+  const parsed = publishLessonsSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Validation failed" });
+    return;
+  }
+
+  try {
+    const result = await lessonsService.publishLessons(
+      req.user!.userId,
+      parsed.data.lessonIds,
+    );
+    logger.info(`Lessons published: ${result.published.length}`);
+    res.json(result);
+  } catch (err: unknown) {
+    const error = err as Error & { statusCode?: number };
+    if (error.statusCode) {
+      res.status(error.statusCode).json({ error: error.message });
+      return;
+    }
+    logger.error("Failed to publish lessons", { error: error.message });
+    res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
+export async function unpublishLessons(req: Request, res: Response) {
+  const parsed = unpublishLessonsSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Validation failed" });
+    return;
+  }
+
+  try {
+    const result = await lessonsService.unpublishLessons(
+      req.user!.userId,
+      parsed.data.lessonIds,
+    );
+    logger.info(`Lessons unpublished: ${result.unpublished.length}`);
+    res.json(result);
+  } catch (err: unknown) {
+    const error = err as Error & { statusCode?: number };
+    if (error.statusCode) {
+      res.status(error.statusCode).json({ error: error.message });
+      return;
+    }
+    logger.error("Failed to unpublish lessons", { error: error.message });
     res.status(500).json({ error: "Something went wrong" });
   }
 }

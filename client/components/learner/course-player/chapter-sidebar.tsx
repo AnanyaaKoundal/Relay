@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2, Circle, PlayCircle } from "lucide-react";
+import { formatDuration } from "@/lib/utils";
 
 type Lesson = {
   id: string;
@@ -22,13 +23,6 @@ type ChapterSidebarProps = {
   completedLessonIds: Set<string>;
   onSelectLesson: (lessonId: string) => void;
 };
-
-function formatDuration(seconds: number | null): string {
-  if (!seconds) return "";
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return m > 0 ? `${m}m ${s}s` : `${s}s`;
-}
 
 function contentTypeIcon(type: string) {
   if (type === "VIDEO") return "🎥";

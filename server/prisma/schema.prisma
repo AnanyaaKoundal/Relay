@@ -22,6 +22,11 @@ enum ContentType {
   QUIZ
 }
 
+enum LessonStatus {
+  DRAFT
+  PUBLISHED
+}
+
 enum Difficulty {
   BEGINNER
   INTERMEDIATE
@@ -91,12 +96,13 @@ model Course {
 }
 
 model Chapter {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   title      String
-  orderIndex Int      @map("order_index")
-  courseId    String   @map("course_id")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  titleDraft String?   @map("title_draft")
+  orderIndex Int       @map("order_index")
+  courseId    String    @map("course_id")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
 
   course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
   lessons Lesson[]
@@ -105,16 +111,18 @@ model Chapter {
 }
 
 model Lesson {
-  id              String      @id @default(uuid())
-  title           String
-  orderIndex      Int         @map("order_index")
-  contentType     ContentType @map("content_type")
-  contentId       String      @map("content_id")
-  durationSeconds Int?        @map("duration_seconds")
-  isPreview       Boolean     @default(false) @map("is_preview")
-  chapterId        String      @map("chapter_id")
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
+  id                  String       @id @default(uuid())
+  title               String
+  orderIndex          Int          @map("order_index")
+  contentType         ContentType  @map("content_type")
+  contentId           String       @map("content_id")
+  publishedContentId  String?      @map("published_content_id")
+  status              LessonStatus @default(DRAFT)
+  durationSeconds     Int?         @map("duration_seconds")
+  isPreview           Boolean      @default(false) @map("is_preview")
+  chapterId           String       @map("chapter_id")
+  createdAt           DateTime     @default(now()) @map("created_at")
+  updatedAt           DateTime     @updatedAt @map("updated_at")
 
   chapter  Chapter    @relation(fields: [chapterId], references: [id], onDelete: Cascade)
   notes    Note[]

@@ -43,11 +43,13 @@ export async function checkEnrollment(userId: string, courseId: string) {
           instructor: { select: { id: true, name: true } },
           chapters: {
             orderBy: { orderIndex: "asc" },
+            where: { lessons: { some: { status: "PUBLISHED" } } },
             select: {
               id: true,
               title: true,
               orderIndex: true,
               lessons: {
+                where: { status: "PUBLISHED" },
                 orderBy: { orderIndex: "asc" },
                 select: {
                   id: true,
@@ -133,19 +135,22 @@ export async function getLessonContent(
     });
   }
 
+  // Learners see the published snapshot if it exists, otherwise current content
+  const resolvedContentId = lesson.publishedContentId ?? lesson.contentId;
+
   let content: Record<string, unknown> | null = null;
 
   if (lesson.contentType === "VIDEO") {
     content = await prisma.videoContent.findUnique({
-      where: { id: lesson.contentId },
+      where: { id: resolvedContentId },
     });
   } else if (lesson.contentType === "TEXT") {
     content = await prisma.textContent.findUnique({
-      where: { id: lesson.contentId },
+      where: { id: resolvedContentId },
     });
   } else if (lesson.contentType === "QUIZ") {
     const raw = await prisma.quizContent.findUnique({
-      where: { id: lesson.contentId },
+      where: { id: resolvedContentId },
     });
     if (raw) {
       content = { ...raw, questions: JSON.parse(raw.questions as string) };
@@ -196,10 +201,11 @@ export async function markLessonComplete(
     update: {},
   });
 
-  // Recalculate progress percentage
+  // Recalculate progress percentage (only PUBLISHED lessons)
   const totalLessons = await prisma.lesson.count({
     where: {
       chapter: { courseId },
+      status: "PUBLISHED",
     },
   });
 

@@ -12,6 +12,9 @@ export type CourseListItem = {
   createdAt: string;
   updatedAt: string;
   _count: { chapters: number; enrollments: number };
+  chapters?: {
+    lessons: { id: string }[];
+  }[];
 };
 
 export type CourseDetail = CourseListItem & {

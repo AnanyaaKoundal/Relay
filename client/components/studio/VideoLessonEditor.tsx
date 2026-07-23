@@ -31,6 +31,7 @@ export function VideoLessonEditor({
   initial,
   lessonTitle,
   lessonId,
+  onResolveLessonId,
 }: {
   open: boolean;
   onClose: () => void;
@@ -38,6 +39,7 @@ export function VideoLessonEditor({
   initial: VideoContent;
   lessonTitle: string;
   lessonId: string;
+  onResolveLessonId?: () => Promise<string>;
 }) {
   const [title, setTitle] = useState(lessonTitle);
   const [file, setFile] = useState<File | null>(null);
@@ -66,9 +68,10 @@ export function VideoLessonEditor({
       setUploadStatus("uploading");
       setUploadProgress(0);
 
-      const { uploadUrl, fileKey } = await presignUpload(file.name, file.type, lessonId);
+      const realId = onResolveLessonId ? await onResolveLessonId() : lessonId;
+      const { uploadUrl, fileKey } = await presignUpload(file.name, file.type, realId);
       await uploadFileWithProgress(API_URL, uploadUrl, file, setUploadProgress);
-      await completeUpload(lessonId, fileKey);
+      await completeUpload(realId, fileKey);
 
       setUploadStatus("done");
       onSave(

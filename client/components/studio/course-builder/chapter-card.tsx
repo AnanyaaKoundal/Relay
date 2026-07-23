@@ -10,6 +10,7 @@ import { LessonRow } from "./lesson-row";
 export function ChapterCard({
   chapter,
   chapterNumber,
+  isPublishedCourse,
   onToggleExpand,
   onUpdateTitle,
   onDelete,
@@ -19,9 +20,12 @@ export function ChapterCard({
   onToggleLessonPreview,
   onToggleChapterPreview,
   onOpenLessonEditor,
+  selectedLessons,
+  onToggleLessonSelect,
 }: {
   chapter: Chapter;
   chapterNumber: number;
+  isPublishedCourse: boolean;
   onToggleExpand: () => void;
   onUpdateTitle: (title: string) => void;
   onDelete: () => void;
@@ -31,6 +35,8 @@ export function ChapterCard({
   onToggleLessonPreview: (lessonId: string) => void;
   onToggleChapterPreview: () => void;
   onOpenLessonEditor: (lessonId: string) => void;
+  selectedLessons?: Set<string>;
+  onToggleLessonSelect?: (lessonId: string) => void;
 }) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [title, setTitle] = useState(chapter.title);
@@ -39,6 +45,9 @@ export function ChapterCard({
 
   const allPreview = chapter.lessons.length > 0 && chapter.lessons.every((l) => l.isPreview);
   const somePreview = chapter.lessons.some((l) => l.isPreview) && !allPreview;
+  const draftCount = chapter.lessons.filter((l) => l.status === "DRAFT").length;
+
+  const displayTitle = isPublishedCourse && chapter.titleDraft ? chapter.titleDraft : chapter.title;
 
   const handleSaveTitle = () => {
     if (title.trim()) {
@@ -88,13 +97,22 @@ export function ChapterCard({
             onClick={() => setEditingTitle(true)}
             className="flex-1 text-left text-sm font-medium hover:text-primary transition-colors"
           >
-            {chapter.title}
+            {displayTitle}
+            {isPublishedCourse && chapter.titleDraft && chapter.titleDraft !== chapter.title && (
+              <span className="ml-2 text-[10px] text-amber-600 font-normal">(pending title)</span>
+            )}
           </button>
         )}
 
         <span className="text-xs text-muted-foreground shrink-0">
           {chapter.lessons.length} lesson{chapter.lessons.length !== 1 ? "s" : ""}
         </span>
+
+        {draftCount > 0 && (
+          <span className="shrink-0 rounded-full bg-amber-50 text-amber-700 px-1.5 py-0.5 text-[10px] font-medium">
+            {draftCount} draft{draftCount !== 1 ? "s" : ""}
+          </span>
+        )}
 
         {/* Chapter Preview Toggle */}
         {chapter.lessons.length > 0 && (
@@ -183,6 +201,8 @@ export function ChapterCard({
                 onDelete={() => onDeleteLesson(lesson.id)}
                 onTogglePreview={() => onToggleLessonPreview(lesson.id)}
                 onOpenEditor={() => onOpenLessonEditor(lesson.id)}
+                selected={selectedLessons?.has(lesson.id)}
+                onToggleSelect={onToggleLessonSelect ? () => onToggleLessonSelect(lesson.id) : undefined}
               />
             ))
           )}

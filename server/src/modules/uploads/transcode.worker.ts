@@ -139,18 +139,30 @@ async function transcode(data: { videoContentId: string; fileKey: string; lesson
 
     // Update DB
     const hlsUrl = `/s3/${s3Prefix}master.m3u8`;
-    await prisma.videoContent.update({
+    const existing = await prisma.videoContent.findUnique({
       where: { id: data.videoContentId },
-      data: { hlsUrl, processingStatus: "READY" },
+      select: { id: true },
     });
+    if (existing) {
+      await prisma.videoContent.update({
+        where: { id: data.videoContentId },
+        data: { hlsUrl, processingStatus: "READY" },
+      });
+    }
 
     logger.info(`Transcoding complete for ${data.videoContentId}`);
   } catch (err) {
     logger.error(`Transcoding failed for ${data.videoContentId}`, { error: (err as Error).message });
-    await prisma.videoContent.update({
+    const existing = await prisma.videoContent.findUnique({
       where: { id: data.videoContentId },
-      data: { processingStatus: "FAILED" },
+      select: { id: true },
     });
+    if (existing) {
+      await prisma.videoContent.update({
+        where: { id: data.videoContentId },
+        data: { processingStatus: "FAILED" },
+      });
+    }
     throw err;
   } finally {
     // Cleanup temp files

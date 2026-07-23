@@ -34,7 +34,7 @@ export function QuizLessonEditor({
 }: {
   open: boolean;
   onClose: () => void;
-  onSave: (data: QuizContent, title: string) => void;
+  onSave: (data: QuizContent, title: string) => void | Promise<void>;
   initial: QuizContent;
   lessonTitle: string;
 }) {
@@ -100,8 +100,8 @@ export function QuizLessonEditor({
     );
   }
 
-  function handleSave() {
-    onSave({ questions }, title.trim() || lessonTitle);
+  async function handleSave() {
+    await onSave({ questions }, title.trim() || lessonTitle);
     onClose();
   }
 

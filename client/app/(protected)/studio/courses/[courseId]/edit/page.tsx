@@ -1,17 +1,16 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { getCourse, updateCourse } from "@/services/course.service";
 import * as chapterApi from "@/services/chapter.service";
 import * as lessonApi from "@/services/lesson.service";
 import { useConfirm } from "@/components/shared/confirm-modal";
-import {
-  VideoLessonEditor,
-  TextLessonEditor,
-  QuizLessonEditor,
-} from "@/components/studio/lesson-editors";
+import { useProcessingPolling } from "@/hooks/useProcessingPolling";
+import { VideoLessonEditor } from "@/components/studio/VideoLessonEditor";
+import { TextLessonEditor } from "@/components/studio/TextLessonEditor";
+import { QuizLessonEditor } from "@/components/studio/QuizLessonEditor";
 import type {
   LessonType,
   LessonContent,
@@ -22,6 +21,7 @@ import type {
 import type { CourseDetail } from "@/types/course.types";
 import {
   ChapterCard,
+  PublishToolbar,
   type Lesson,
   type Chapter,
   mapLessonContent,
@@ -36,7 +36,28 @@ import {
   Settings,
   Check,
   Loader2,
+  Undo2,
 } from "lucide-react";
+
+/* ─── Helpers ─── */
+function quizToBackendPayload(quiz: QuizContent) {
+  return quiz.questions.map((q) => ({
+    question: q.question,
+    options: q.options.map((o) => o.text),
+    correctAnswer: q.options.findIndex((o) => o.id === q.correctOptionId),
+    explanation: q.explanation,
+  }));
+}
+
+async function loadAllChapters(courseId: string): Promise<Chapter[]> {
+  const chs = await chapterApi.listChapters(courseId);
+  const chapters: Chapter[] = [];
+  for (const ch of chs) {
+    const lessons = await lessonApi.listLessons(ch.id);
+    chapters.push(mapBackendChapter({ ...ch, lessons }));
+  }
+  return chapters;
+}
 
 /* ─── Main Builder ─── */
 export default function CourseBuilderWorkspace() {
@@ -47,6 +68,7 @@ export default function CourseBuilderWorkspace() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -57,6 +79,31 @@ export default function CourseBuilderWorkspace() {
     lessonId: string;
   } | null>(null);
 
+  const [selectedLessons, setSelectedLessons] = useState<Set<string>>(new Set());
+  const editorLessonRef = useRef(editorLesson);
+  useEffect(() => { editorLessonRef.current = editorLesson; }, [editorLesson]);
+
+  const [tempLessonMeta, setTempLessonMeta] = useState<{
+    chapterId: string;
+    type: LessonType;
+    title: string;
+  } | null>(null);
+
+  /* ── Resolve temp lesson ID to real backend ID (video only) ── */
+  const resolveLessonId = useCallback(
+    async (chapterId: string, tempId: string, type: LessonType, title: string): Promise<string> => {
+      const created = await lessonApi.createLesson(chapterId, {
+        title,
+        contentType: type,
+        videoUrl: "",
+        durationSeconds: undefined,
+      });
+      setEditorLesson({ chapterId, lessonId: created.id });
+      return created.id;
+    },
+    []
+  );
+
   /* ── Load course + chapters from backend ── */
   useEffect(() => {
     if (!params?.courseId) return;
@@ -66,34 +113,15 @@ export default function CourseBuilderWorkspace() {
       try {
         const [c, chs] = await Promise.all([
           getCourse(params!.courseId),
-          chapterApi.listChapters(params!.courseId),
+          loadAllChapters(params!.courseId),
         ]);
         if (cancelled) return;
-
-        // Enrich each chapter's lessons with content from backend
-        const finalChapters: Chapter[] = [];
-        for (const ch of chs) {
-          const lessons = await lessonApi.listLessons(ch.id);
-          finalChapters.push({
-            id: ch.id,
-            title: ch.title,
-            isExpanded: true,
-            lessons: lessons.map((l) => ({
-              id: l.id,
-              title: l.title,
-              contentType: l.contentType,
-              durationSeconds: l.durationSeconds,
-              isPreview: l.isPreview,
-              content: mapLessonContent(l.contentType, l.content as Record<string, unknown> | null),
-            })),
-          });
-        }
 
         if (!cancelled) {
           setCourse(c);
           setTitle(c.title);
           setDescription(c.description);
-          setChapters(finalChapters);
+          setChapters(chs);
         }
       } catch {
         if (!cancelled) setCourse(null);
@@ -106,17 +134,74 @@ export default function CourseBuilderWorkspace() {
     return () => { cancelled = true; };
   }, [params?.courseId]);
 
+  const isPublishedCourse = course?.status === "PUBLISHED";
+
+  /* ── Selection helpers ── */
+  const allLessons = useMemo(
+    () => chapters.flatMap((ch) => ch.lessons.map((l) => ({ ...l, chapterId: ch.id }))),
+    [chapters]
+  );
+
+  const selectedDraftCount = useMemo(
+    () => allLessons.filter((l) => selectedLessons.has(l.id) && l.status === "DRAFT").length,
+    [allLessons, selectedLessons]
+  );
+
+  const selectedPublishedCount = useMemo(
+    () => allLessons.filter((l) => selectedLessons.has(l.id) && l.status === "PUBLISHED").length,
+    [allLessons, selectedLessons]
+  );
+
+  const totalDraftCount = useMemo(
+    () => allLessons.filter((l) => l.status === "DRAFT").length,
+    [allLessons]
+  );
+
+  const toggleLessonSelect = useCallback((lessonId: string) => {
+    setSelectedLessons((prev) => {
+      const next = new Set(prev);
+      if (next.has(lessonId)) {
+        next.delete(lessonId);
+      } else {
+        next.add(lessonId);
+      }
+      return next;
+    });
+  }, []);
+
   /* ── Find the lesson being edited ── */
   function findEditingLesson() {
     if (!editorLesson) return null;
+    // Check real chapters first
     for (const ch of chapters) {
       if (ch.id === editorLesson.chapterId) {
         const lesson = ch.lessons.find((l) => l.id === editorLesson.lessonId);
         if (lesson) return lesson;
       }
     }
+    // Fallback: temp lesson not yet in chapters
+    if (tempLessonMeta && editorLesson.chapterId === tempLessonMeta.chapterId) {
+      return {
+        id: editorLesson.lessonId,
+        title: tempLessonMeta.title,
+        contentType: tempLessonMeta.type,
+        durationSeconds: null,
+        isPreview: false,
+        status: "DRAFT" as const,
+        content: null,
+      };
+    }
     return null;
   }
+
+  /* ── Refresh lesson statuses from backend ── */
+  const refreshLessonStatuses = useCallback(async () => {
+    if (!params?.courseId) return;
+    setChapters(await loadAllChapters(params!.courseId));
+  }, [params?.courseId]);
+
+  /* ── Auto-poll PROCESSING/PENDING lessons ── */
+  const { markSaved } = useProcessingPolling(allLessons, refreshLessonStatuses);
 
   /* ── Save course details (title/description) ── */
   async function handleSave() {
@@ -133,34 +218,114 @@ export default function CourseBuilderWorkspace() {
     }
   }
 
-  /* ── Publish ── */
-  async function handlePublish() {
+  /* ── Publish course (DRAFT → PUBLISHED) ── */
+  async function handlePublishCourse() {
     if (!params?.courseId) return;
-
-    const totalLessons = chapters.reduce((acc, c) => acc + c.lessons.length, 0);
-    if (chapters.length === 0 || totalLessons === 0) {
-      await confirm({
-        title: "Cannot publish",
-        description:
-          "You need at least one chapter with one lesson before publishing.",
-        confirmLabel: "OK",
-      });
-      return;
-    }
 
     const ok = await confirm({
       title: "Publish course",
       description:
-        "Your course will become visible to learners. Make sure everything looks good.",
+        "Your course will become visible to learners. All draft lessons will be published and chapter title changes will be applied.",
       confirmLabel: "Publish",
     });
     if (!ok) return;
-    setSaving(true);
+    setPublishing(true);
     try {
       const updated = await updateCourse(params.courseId, { status: "PUBLISHED" });
       setCourse((prev) => (prev ? { ...prev, ...updated } : prev));
+      await refreshLessonStatuses();
+    } catch (err) {
+      await confirm({
+        title: "Publish failed",
+        description: err instanceof Error ? err.message : "Something went wrong",
+        confirmLabel: "OK",
+      });
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  /* ── Discard draft (PUBLISHED → DRAFT) ── */
+  async function handleDiscardDraft() {
+    if (!params?.courseId) return;
+
+    const ok = await confirm({
+      title: "Revert to draft",
+      description:
+        "This will un-publish the course and hide it from learners. You can re-publish when ready.",
+      confirmLabel: "Revert to Draft",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    setPublishing(true);
+    try {
+      const updated = await updateCourse(params.courseId, { status: "DRAFT" });
+      setCourse((prev) => (prev ? { ...prev, ...updated } : prev));
     } catch { /* silent */ } finally {
-      setSaving(false);
+      setPublishing(false);
+    }
+  }
+
+  /* ── Batch publish lessons ── */
+  async function handleBatchPublish() {
+    const ids = allLessons.filter((l) => selectedLessons.has(l.id) && l.status === "DRAFT").map((l) => l.id);
+    if (ids.length === 0) return;
+    setPublishing(true);
+    try {
+      await lessonApi.publishLessons(ids);
+      setSelectedLessons(new Set());
+      await refreshLessonStatuses();
+    } catch { /* silent */ } finally {
+      setPublishing(false);
+    }
+  }
+
+  /* ── Batch unpublish lessons ── */
+  async function handleBatchUnpublish() {
+    const ids = allLessons.filter((l) => selectedLessons.has(l.id) && l.status === "PUBLISHED").map((l) => l.id);
+    if (ids.length === 0) return;
+    setPublishing(true);
+    try {
+      await lessonApi.unpublishLessons(ids);
+      setSelectedLessons(new Set());
+      await refreshLessonStatuses();
+    } catch { /* silent */ } finally {
+      setPublishing(false);
+    }
+  }
+
+  /* ── Publish All Changes (published course) ── */
+  async function handlePublishAllChanges() {
+    if (!params?.courseId) return;
+    const draftIds = allLessons.filter((l) => l.status === "DRAFT").map((l) => l.id);
+    if (draftIds.length === 0 && totalDraftCount === 0) return;
+
+    const ok = await confirm({
+      title: "Publish all changes",
+      description: `Publish ${draftIds.length} draft lesson${draftIds.length !== 1 ? "s" : ""} and apply all pending chapter title changes?`,
+      confirmLabel: "Publish All",
+    });
+    if (!ok) return;
+    setPublishing(true);
+    try {
+      if (draftIds.length > 0) {
+        await lessonApi.publishLessons(draftIds);
+      }
+      // Publish all chapter titleDrafts
+      const chapterIds = chapters.map((c) => c.id);
+      if (chapterIds.length > 0) {
+        await chapterApi.publishChapterTitles(chapterIds);
+      }
+      setSelectedLessons(new Set());
+      await refreshLessonStatuses();
+    } catch (err) {
+      await confirm({
+        title: "Publish failed",
+        description: err instanceof Error ? err.message : "Something went wrong",
+        confirmLabel: "OK",
+      });
+    } finally {
+      setPublishing(false);
     }
   }
 
@@ -185,54 +350,32 @@ export default function CourseBuilderWorkspace() {
     if (!ok) return;
     try {
       await chapterApi.deleteChapter(chapterId);
+      markSaved();
       setChapters((prev) => prev.filter((c) => c.id !== chapterId));
     } catch { /* silent */ }
-  }, [chapters, confirm]);
+  }, [chapters, confirm, markSaved]);
 
   /* ── Update Chapter Title (immediate backend save) ── */
   const handleUpdateChapterTitle = useCallback(async (chapterId: string, newTitle: string) => {
     setChapters((prev) =>
-      prev.map((c) => (c.id === chapterId ? { ...c, title: newTitle } : c))
+      prev.map((c) => (c.id === chapterId ? { ...c, title: newTitle, titleDraft: isPublishedCourse ? newTitle : null } : c))
     );
     try {
       await chapterApi.updateChapter(chapterId, { title: newTitle });
+      markSaved();
     } catch { /* silent */ }
-  }, []);
+  }, [isPublishedCourse, markSaved]);
 
-  /* ── Add Lesson (immediate backend save) ── */
+  /* ── Add Lesson (deferred: only opens editor, no backend call, no UI row) ── */
   const handleAddLesson = useCallback(async (chapterId: string, type: LessonType) => {
     const typeLabels: Record<LessonType, string> = {
       VIDEO: "New Video Lesson",
       TEXT: "New Text Lesson",
       QUIZ: "New Quiz",
     };
-    try {
-      const l = await lessonApi.createLesson(chapterId, {
-        title: typeLabels[type],
-        contentType: type,
-        ...(type === "VIDEO"
-          ? { videoUrl: "", durationSeconds: undefined }
-          : type === "TEXT"
-          ? { body: "" }
-          : { questions: [] }),
-      });
-      const newLesson: Lesson = {
-        id: l.id,
-        title: l.title,
-        contentType: l.contentType,
-        durationSeconds: l.durationSeconds,
-        isPreview: false,
-        content: mapLessonContent(l.contentType, l.content as Record<string, unknown> | null),
-      };
-      setChapters((prev) =>
-        prev.map((c) =>
-          c.id === chapterId
-            ? { ...c, lessons: [...c.lessons, newLesson], isExpanded: true }
-            : c
-        )
-      );
-      setEditorLesson({ chapterId, lessonId: l.id });
-    } catch { /* silent */ }
+    const tempId = `temp_${crypto.randomUUID()}`;
+    setTempLessonMeta({ chapterId, type, title: typeLabels[type] });
+    setEditorLesson({ chapterId, lessonId: tempId });
   }, []);
 
   /* ── Update Lesson Title (immediate backend save) ── */
@@ -246,72 +389,120 @@ export default function CourseBuilderWorkspace() {
     );
     try {
       await lessonApi.updateLesson(lessonId, { title: newTitle });
+      markSaved();
     } catch { /* silent */ }
-  }, []);
+  }, [markSaved]);
 
-  /* ── Save lesson content from editor (immediate backend save) ── */
+  /* ── Save lesson content from editor ── */
   const handleSaveContent = useCallback(
     async (type: LessonType, data: LessonContent, newTitle: string) => {
-      if (!editorLesson) return;
-      const { chapterId, lessonId } = editorLesson;
+      const current = editorLessonRef.current;
+      if (!current) return;
+      const { chapterId, lessonId } = current;
+      const isNew = lessonId.startsWith("temp_");
 
-      // Update local state
-      setChapters((prev) =>
-        prev.map((c) =>
-          c.id === chapterId
-            ? {
-                ...c,
-                lessons: c.lessons.map((l) =>
-                  l.id === lessonId
-                    ? {
-                        ...l,
-                        title: newTitle,
-                        content: data,
-                        durationSeconds:
-                          type === "VIDEO" ? (data as VideoContent).durationSeconds : l.durationSeconds,
-                      }
-                    : l
-                ),
-              }
-            : c
-        )
-      );
+      if (isNew) {
+        let savedId = lessonId;
 
-      // Persist to backend
-      try {
         if (type === "VIDEO") {
+          // Video: lesson already created by resolveLessonId, just update
           const v = data as VideoContent;
           await lessonApi.updateLesson(lessonId, {
             title: newTitle,
             videoUrl: v.videoUrl,
             durationSeconds: v.durationSeconds,
           });
-        } else if (type === "TEXT") {
-          await lessonApi.updateLesson(lessonId, {
+          savedId = lessonId;
+        } else {
+          // Text/Quiz: create on backend now
+          const created = await lessonApi.createLesson(chapterId, {
             title: newTitle,
-            body: (data as TextContent).body,
+            contentType: type,
+            ...(type === "TEXT"
+              ? { body: (data as TextContent).body }
+              : { questions: quizToBackendPayload(data as QuizContent) }),
           });
-        } else if (type === "QUIZ") {
-          const q = data as QuizContent;
-          await lessonApi.updateLesson(lessonId, {
-            title: newTitle,
-            questions: q.questions.map((question) => ({
-              question: question.question,
-              options: question.options.map((o) => o.text),
-              correctAnswer: question.options.findIndex((o) => o.id === question.correctOptionId),
-              explanation: question.explanation,
-            })),
-          });
+          savedId = created.id;
         }
-      } catch { /* silent */ }
+
+        // Add new lesson to chapters
+        setChapters((prev) =>
+          prev.map((c) =>
+            c.id === chapterId
+              ? {
+                  ...c,
+                  isExpanded: true,
+                  lessons: [
+                    ...c.lessons,
+                    {
+                      id: savedId,
+                      title: newTitle,
+                      contentType: type,
+                      durationSeconds: type === "VIDEO" ? (data as VideoContent).durationSeconds : null,
+                      isPreview: false,
+                      status: "DRAFT" as const,
+                      content: data,
+                    },
+                  ],
+                }
+              : c
+          )
+        );
+        setEditorLesson({ chapterId, lessonId: savedId });
+        setTempLessonMeta(null);
+      } else {
+        // Existing lesson: update in chapters
+        setChapters((prev) =>
+          prev.map((c) =>
+            c.id === chapterId
+              ? {
+                  ...c,
+                  lessons: c.lessons.map((l) =>
+                    l.id === lessonId
+                      ? {
+                          ...l,
+                          title: newTitle,
+                          content: data,
+                          durationSeconds:
+                            type === "VIDEO" ? (data as VideoContent).durationSeconds : l.durationSeconds,
+                        }
+                      : l
+                  ),
+                }
+              : c
+          )
+        );
+        try {
+          if (type === "VIDEO") {
+            const v = data as VideoContent;
+            await lessonApi.updateLesson(lessonId, {
+              title: newTitle,
+              videoUrl: v.videoUrl,
+              durationSeconds: v.durationSeconds,
+            });
+          } else if (type === "TEXT") {
+            await lessonApi.updateLesson(lessonId, {
+              title: newTitle,
+              body: (data as TextContent).body,
+            });
+          } else if (type === "QUIZ") {
+            await lessonApi.updateLesson(lessonId, {
+              title: newTitle,
+              questions: quizToBackendPayload(data as QuizContent),
+            });
+          }
+        } catch { /* silent */ }
+      }
+      markSaved();
     },
-    [editorLesson]
+    [markSaved]
   );
 
   /* ── Delete Lesson (immediate backend save) ── */
   const handleDeleteLesson = useCallback(async (chapterId: string, lessonId: string) => {
     try {
       await lessonApi.deleteLesson(lessonId);
+      markSaved();
       setChapters((prev) =>
         prev.map((c) =>
           c.id === chapterId
@@ -320,7 +511,7 @@ export default function CourseBuilderWorkspace() {
         )
       );
     } catch { /* silent */ }
-  }, []);
+  }, [markSaved]);
 
   /* ── Toggle preview (persisted with confirmation) ── */
   const handleToggleLessonPreview = useCallback(async (chapterId: string, lessonId: string) => {
@@ -346,8 +537,9 @@ export default function CourseBuilderWorkspace() {
     );
     try {
       await lessonApi.updateLesson(lessonId, { isPreview: newValue });
+      markSaved();
     } catch { /* silent */ }
-  }, [chapters, confirm]);
+  }, [chapters, confirm, markSaved]);
 
   /* ── Toggle chapter preview (all lessons in chapter) ── */
   const handleToggleChapterPreview = useCallback(async (chapterId: string) => {
@@ -374,8 +566,15 @@ export default function CourseBuilderWorkspace() {
       await Promise.all(
         chapter.lessons.map((l) => lessonApi.updateLesson(l.id, { isPreview: newValue }))
       );
+      markSaved();
     } catch { /* silent */ }
-  }, [chapters, confirm]);
+  }, [chapters, confirm, markSaved]);
+
+  /* ── Editor close ── */
+  const handleEditorClose = useCallback(async (chapterId: string, lessonId: string) => {
+    setEditorLesson(null);
+    setTempLessonMeta(null);
+  }, []);
 
   const totalLessons = chapters.reduce((acc, c) => acc + c.lessons.length, 0);
   const editingLesson = findEditingLesson();
@@ -427,14 +626,36 @@ export default function CourseBuilderWorkspace() {
         </div>
 
         <div className="flex items-center gap-2">
+          {course.status === "PUBLISHED" && totalDraftCount > 0 && (
+            <button
+              type="button"
+              onClick={handlePublishAllChanges}
+              disabled={publishing}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/80 transition-colors disabled:opacity-50"
+            >
+              {publishing ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+              Publish All ({totalDraftCount})
+            </button>
+          )}
+          {course.status === "PUBLISHED" && (
+            <button
+              type="button"
+              onClick={handleDiscardDraft}
+              disabled={publishing}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            >
+              <Undo2 className="size-3.5" />
+              Revert to Draft
+            </button>
+          )}
           {course.status !== "PUBLISHED" && (
             <button
               type="button"
-              onClick={handlePublish}
-              disabled={saving}
+              onClick={handlePublishCourse}
+              disabled={publishing}
               className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/80 transition-colors disabled:opacity-50"
             >
-              <Send className="size-3.5" />
+              {publishing ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
               Publish
             </button>
           )}
@@ -494,10 +715,23 @@ export default function CourseBuilderWorkspace() {
         <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground pt-1">
           <span>{chapters.length} chapters</span>
           <span>{totalLessons} lessons</span>
+          {totalDraftCount > 0 && (
+            <span className="text-amber-600">{totalDraftCount} draft{totalDraftCount !== 1 ? "s" : ""}</span>
+          )}
           <span>${Number(course.price).toFixed(2)}</span>
           <span>{course.difficulty ?? "N/A"}</span>
         </div>
       </div>
+
+      {/* Batch Publish Toolbar */}
+      <PublishToolbar
+        selectedCount={selectedLessons.size}
+        draftCount={selectedDraftCount}
+        publishedCount={selectedPublishedCount}
+        onPublish={handleBatchPublish}
+        onUnpublish={handleBatchUnpublish}
+        publishing={publishing}
+      />
 
       {/* Chapters */}
       <div>
@@ -534,6 +768,7 @@ export default function CourseBuilderWorkspace() {
                 key={chapter.id}
                 chapter={chapter}
                 chapterNumber={i + 1}
+                isPublishedCourse={isPublishedCourse}
                 onToggleExpand={() =>
                   setChapters((prev) =>
                     prev.map((c) => (c.id === chapter.id ? { ...c, isExpanded: !c.isExpanded } : c))
@@ -547,6 +782,8 @@ export default function CourseBuilderWorkspace() {
                 onToggleLessonPreview={(lessonId) => handleToggleLessonPreview(chapter.id, lessonId)}
                 onToggleChapterPreview={() => handleToggleChapterPreview(chapter.id)}
                 onOpenLessonEditor={(lessonId) => setEditorLesson({ chapterId: chapter.id, lessonId })}
+                selectedLessons={selectedLessons}
+                onToggleLessonSelect={toggleLessonSelect}
               />
             ))}
 
@@ -566,17 +803,25 @@ export default function CourseBuilderWorkspace() {
       {editingLesson && editingLesson.contentType === "VIDEO" && (
         <VideoLessonEditor
           open
-          onClose={() => setEditorLesson(null)}
+          onClose={() => handleEditorClose(editorLesson!.chapterId, editorLesson!.lessonId)}
           onSave={(data, t) => handleSaveContent("VIDEO", data, t)}
           initial={(editingLesson.content as VideoContent) ?? { videoUrl: "", durationSeconds: null, resources: [] }}
           lessonTitle={editingLesson.title}
           lessonId={editingLesson.id}
+          onResolveLessonId={
+            editingLesson.id.startsWith("temp_")
+              ? () => {
+                  const el = editorLesson!;
+                  return resolveLessonId(el.chapterId, el.lessonId, "VIDEO", editingLesson.title);
+                }
+              : undefined
+          }
         />
       )}
       {editingLesson && editingLesson.contentType === "TEXT" && (
         <TextLessonEditor
           open
-          onClose={() => setEditorLesson(null)}
+          onClose={() => handleEditorClose(editorLesson!.chapterId, editorLesson!.lessonId)}
           onSave={(data, t) => handleSaveContent("TEXT", data, t)}
           initial={(editingLesson.content as TextContent) ?? { body: "" }}
           lessonTitle={editingLesson.title}
@@ -585,7 +830,7 @@ export default function CourseBuilderWorkspace() {
       {editingLesson && editingLesson.contentType === "QUIZ" && (
         <QuizLessonEditor
           open
-          onClose={() => setEditorLesson(null)}
+          onClose={() => handleEditorClose(editorLesson!.chapterId, editorLesson!.lessonId)}
           onSave={(data, t) => handleSaveContent("QUIZ", data, t)}
           initial={(editingLesson.content as QuizContent) ?? { questions: [] }}
           lessonTitle={editingLesson.title}

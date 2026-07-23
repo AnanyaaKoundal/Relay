@@ -13,3 +13,7 @@ export const updateChapterSchema = z.object({
 export const reorderChaptersSchema = z.object({
   chapterIds: z.array(z.string().uuid()).min(1),
 });
+
+export const publishChapterTitlesSchema = z.object({
+  chapterIds: z.array(z.string().uuid()).min(1),
+});

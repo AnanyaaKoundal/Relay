@@ -166,6 +166,10 @@ export default function StudioCoursesPage() {
               label: course.status,
               className: "bg-muted text-muted-foreground border-border",
             };
+            const draftCount = course.chapters?.reduce(
+              (acc, ch) => acc + ch.lessons.length,
+              0
+            ) ?? 0;
 
             return (
               <div
@@ -213,6 +217,11 @@ export default function StudioCoursesPage() {
                     >
                       {status.label}
                     </span>
+                    {course.status === "PUBLISHED" && draftCount > 0 && (
+                      <span className="shrink-0 rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-[10px] font-medium">
+                        {draftCount} draft{draftCount !== 1 ? "s" : ""}
+                      </span>
+                    )}
                   </div>
                   <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">

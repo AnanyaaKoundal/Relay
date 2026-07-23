@@ -10,16 +10,17 @@ export type Lesson = {
   contentType: LessonType;
   durationSeconds: number | null;
   isPreview: boolean;
+  status: "DRAFT" | "PUBLISHED";
+  processingStatus?: string;
   content: LessonContent | null;
-  _saving?: boolean;
 };
 
 export type Chapter = {
   id: string;
   title: string;
+  titleDraft: string | null;
   lessons: Lesson[];
   isExpanded: boolean;
-  _saving?: boolean;
 };
 
 export const lessonTypeConfig: Record<LessonType, { icon: typeof Play; label: string; color: string }> = {
@@ -62,6 +63,7 @@ export function mapBackendChapter(ch: ChapterItem): Chapter {
   return {
     id: ch.id,
     title: ch.title,
+    titleDraft: ch.titleDraft ?? null,
     isExpanded: true,
     lessons: (ch.lessons ?? []).map((l) => ({
       id: l.id,
@@ -69,6 +71,8 @@ export function mapBackendChapter(ch: ChapterItem): Chapter {
       contentType: l.contentType,
       durationSeconds: l.durationSeconds,
       isPreview: l.isPreview,
+      status: l.status,
+      processingStatus: (l.content as Record<string, unknown>)?.processingStatus as string | undefined,
       content: mapLessonContent(l.contentType, l.content),
     })),
   };

@@ -18,6 +18,8 @@ export async function listChapters(instructorId: string, courseId: string) {
           durationSeconds: true,
           orderIndex: true,
           isPreview: true,
+          status: true,
+          publishedContentId: true,
         },
       },
     },
@@ -60,9 +62,25 @@ export async function updateChapter(
 
   await assertCourseOwnership(instructorId, chapter.courseId);
 
+  // Check if course is published — if so, title changes go to titleDraft
+  const course = await prisma.course.findUnique({
+    where: { id: chapter.courseId },
+    select: { status: true },
+  });
+
+  const updateData: Record<string, unknown> = {};
+  if (data.orderIndex !== undefined) updateData.orderIndex = data.orderIndex;
+  if (data.title !== undefined) {
+    if (course?.status === "PUBLISHED") {
+      updateData.titleDraft = data.title;
+    } else {
+      updateData.title = data.title;
+    }
+  }
+
   return prisma.chapter.update({
     where: { id: chapterId },
-    data,
+    data: updateData,
   });
 }
 
@@ -97,4 +115,27 @@ export async function reorderChapters(
   );
 
   return { message: "Chapters reordered" };
+}
+
+export async function publishChapterTitles(instructorId: string, chapterIds: string[]) {
+  const updated: string[] = [];
+
+  for (const chapterId of chapterIds) {
+    const chapter = await prisma.chapter.findUnique({
+      where: { id: chapterId },
+      select: { id: true, courseId: true, titleDraft: true },
+    });
+    if (!chapter) continue;
+    await assertCourseOwnership(instructorId, chapter.courseId);
+    if (!chapter.titleDraft) continue;
+
+    await prisma.chapter.update({
+      where: { id: chapterId },
+      data: { title: chapter.titleDraft, titleDraft: null },
+    });
+
+    updated.push(chapterId);
+  }
+
+  return { published: updated };
 }

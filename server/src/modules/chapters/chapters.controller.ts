@@ -3,6 +3,7 @@ import {
   createChapterSchema,
   updateChapterSchema,
   reorderChaptersSchema,
+  publishChapterTitlesSchema,
 } from "./chapters.schema.js";
 import * as chaptersService from "./chapters.service.js";
 import { logger } from "../../utils/logger.js";
@@ -115,6 +116,31 @@ export async function reorderChapters(req: Request, res: Response) {
       return;
     }
     logger.error("Failed to reorder chapters", { error: error.message });
+    res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
+export async function publishChapterTitles(req: Request, res: Response) {
+  const parsed = publishChapterTitlesSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Validation failed" });
+    return;
+  }
+
+  try {
+    const result = await chaptersService.publishChapterTitles(
+      req.user!.userId,
+      parsed.data.chapterIds,
+    );
+    logger.info(`Chapter titles published: ${result.published.length}`);
+    res.json(result);
+  } catch (err: unknown) {
+    const error = err as Error & { statusCode?: number };
+    if (error.statusCode) {
+      res.status(error.statusCode).json({ error: error.message });
+      return;
+    }
+    logger.error("Failed to publish chapter titles", { error: error.message });
     res.status(500).json({ error: "Something went wrong" });
   }
 }

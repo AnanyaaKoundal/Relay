@@ -83,6 +83,8 @@ export type LessonItem = {
   orderIndex: number;
   durationSeconds: number | null;
   isPreview: boolean;
+  status: "DRAFT" | "PUBLISHED";
+  publishedContentId?: string | null;
   chapterId: string;
   content: VideoContentData | TextContentData | QuizContentData | null;
 };

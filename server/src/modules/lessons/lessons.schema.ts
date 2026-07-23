@@ -47,3 +47,11 @@ export const updateLessonSchema = z.object({
 export const reorderLessonsSchema = z.object({
   lessonIds: z.array(z.string().uuid()).min(1),
 });
+
+export const publishLessonsSchema = z.object({
+  lessonIds: z.array(z.string().uuid()).min(1),
+});
+
+export const unpublishLessonsSchema = z.object({
+  lessonIds: z.array(z.string().uuid()).min(1),
+});
