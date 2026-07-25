@@ -35,7 +35,7 @@ export function VideoLessonEditor({
 }: {
   open: boolean;
   onClose: () => void;
-  onSave: (data: VideoContent, title: string) => void;
+  onSave: (data: VideoContent, title: string) => void | Promise<void>;
   initial: VideoContent;
   lessonTitle: string;
   lessonId: string;
@@ -74,7 +74,7 @@ export function VideoLessonEditor({
       await completeUpload(realId, fileKey);
 
       setUploadStatus("done");
-      onSave(
+      await onSave(
         { videoUrl: `${API_URL}/s3/${fileKey}`, durationSeconds: autoDuration, resources: [] },
         title.trim() || lessonTitle,
       );
@@ -86,8 +86,8 @@ export function VideoLessonEditor({
     }
   }
 
-  function handleSave() {
-    onSave(
+  async function handleSave() {
+    await onSave(
       { videoUrl: initial.videoUrl, durationSeconds: initial.durationSeconds, resources: [] },
       title.trim() || lessonTitle,
     );

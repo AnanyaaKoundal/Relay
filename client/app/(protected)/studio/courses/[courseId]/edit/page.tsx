@@ -374,6 +374,7 @@ export default function CourseBuilderWorkspace() {
       QUIZ: "New Quiz",
     };
     const tempId = `temp_${crypto.randomUUID()}`;
+    pendingLessonRef.current = null;
     setTempLessonMeta({ chapterId, type, title: typeLabels[type] });
     setEditorLesson({ chapterId, lessonId: tempId });
   }, []);
@@ -393,19 +394,28 @@ export default function CourseBuilderWorkspace() {
     } catch { /* silent */ }
   }, [markSaved]);
 
+  /* ── Pending lesson data (for adding to chapters on modal close) ── */
+  const pendingLessonRef = useRef<{
+    chapterId: string;
+    id: string;
+    title: string;
+    contentType: LessonType;
+    durationSeconds: number | null;
+    content: LessonContent;
+  } | null>(null);
+
   /* ── Save lesson content from editor ── */
   const handleSaveContent = useCallback(
     async (type: LessonType, data: LessonContent, newTitle: string) => {
       const current = editorLessonRef.current;
       if (!current) return;
       const { chapterId, lessonId } = current;
-      const isNew = lessonId.startsWith("temp_");
+      const isNew = !!tempLessonMeta && tempLessonMeta.chapterId === chapterId;
 
       if (isNew) {
         let savedId = lessonId;
 
         if (type === "VIDEO") {
-          // Video: lesson already created by resolveLessonId, just update
           const v = data as VideoContent;
           await lessonApi.updateLesson(lessonId, {
             title: newTitle,
@@ -414,7 +424,6 @@ export default function CourseBuilderWorkspace() {
           });
           savedId = lessonId;
         } else {
-          // Text/Quiz: create on backend now
           const created = await lessonApi.createLesson(chapterId, {
             title: newTitle,
             contentType: type,
@@ -425,31 +434,16 @@ export default function CourseBuilderWorkspace() {
           savedId = created.id;
         }
 
-        // Add new lesson to chapters
-        setChapters((prev) =>
-          prev.map((c) =>
-            c.id === chapterId
-              ? {
-                  ...c,
-                  isExpanded: true,
-                  lessons: [
-                    ...c.lessons,
-                    {
-                      id: savedId,
-                      title: newTitle,
-                      contentType: type,
-                      durationSeconds: type === "VIDEO" ? (data as VideoContent).durationSeconds : null,
-                      isPreview: false,
-                      status: "DRAFT" as const,
-                      content: data,
-                    },
-                  ],
-                }
-              : c
-          )
-        );
+        // Don't add to chapters yet — wait for modal close
+        pendingLessonRef.current = {
+          chapterId,
+          id: savedId,
+          title: newTitle,
+          contentType: type,
+          durationSeconds: type === "VIDEO" ? (data as VideoContent).durationSeconds : null,
+          content: data,
+        };
         setEditorLesson({ chapterId, lessonId: savedId });
-        setTempLessonMeta(null);
       } else {
         // Existing lesson: update in chapters
         setChapters((prev) =>
@@ -495,7 +489,7 @@ export default function CourseBuilderWorkspace() {
       }
       markSaved();
     },
-    [markSaved]
+    [markSaved, tempLessonMeta]
   );
 
   /* ── Delete Lesson (immediate backend save) ── */
@@ -570,10 +564,37 @@ export default function CourseBuilderWorkspace() {
     } catch { /* silent */ }
   }, [chapters, confirm, markSaved]);
 
-  /* ── Editor close ── */
+  /* ── Editor close: add pending lesson to chapters ── */
   const handleEditorClose = useCallback(async (chapterId: string, lessonId: string) => {
     setEditorLesson(null);
     setTempLessonMeta(null);
+
+    const pending = pendingLessonRef.current;
+    if (pending && pending.chapterId === chapterId) {
+      setChapters((prev) =>
+        prev.map((c) =>
+          c.id === chapterId
+            ? {
+                ...c,
+                isExpanded: true,
+                lessons: [
+                  ...c.lessons,
+                  {
+                    id: pending.id,
+                    title: pending.title,
+                    contentType: pending.contentType,
+                    durationSeconds: pending.durationSeconds,
+                    isPreview: false,
+                    status: "DRAFT" as const,
+                    content: pending.content,
+                  },
+                ],
+              }
+            : c
+        )
+      );
+      pendingLessonRef.current = null;
+    }
   }, []);
 
   const totalLessons = chapters.reduce((acc, c) => acc + c.lessons.length, 0);
