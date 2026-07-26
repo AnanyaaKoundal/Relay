@@ -92,6 +92,8 @@ model Course {
   chapters      Chapter[]
   enrollments   Enrollment[]
 
+  @@index([status, createdAt])
+  @@index([instructorId, createdAt])
   @@map("courses")
 }
 
@@ -107,6 +109,7 @@ model Chapter {
   course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
   lessons Lesson[]
 
+  @@index([courseId, orderIndex])
   @@map("chapters")
 }
 
@@ -129,6 +132,8 @@ model Lesson {
   questions Question[]
   progress LessonProgress[]
 
+  @@index([chapterId, orderIndex])
+  @@index([chapterId, status])
   @@map("lessons")
 }
 
@@ -172,6 +177,7 @@ model Enrollment {
   progress LessonProgress[]
 
   @@unique([userId, courseId])
+  @@index([userId, enrolledAt])
   @@map("enrollments")
 }
 
@@ -253,5 +259,6 @@ model LessonProgress {
   enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
 
   @@unique([userId, lessonId])
+  @@index(enrollmentId)
   @@map("lesson_progress")
 }
