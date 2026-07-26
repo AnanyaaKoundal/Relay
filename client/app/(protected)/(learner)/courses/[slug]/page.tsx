@@ -14,7 +14,8 @@ import {
 } from "@/services/enrollment.service";
 import type { EnrollmentDetail } from "@/types/enrollment.types";
 import { CurriculumAccordion } from "@/components/learner/course-player/curriculum-accordion";
-import { Users, BookOpen, Clock, Loader2, CheckCircle2 } from "lucide-react";
+import { Users, BookOpen, Clock, CheckCircle2 } from "lucide-react";
+import { Spinner } from "@/components/shared/spinner";
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -60,7 +61,7 @@ export default function CourseDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24 text-muted-foreground text-sm gap-2">
-        <Loader2 className="size-4 animate-spin" />
+        <Spinner />
         Loading course...
       </div>
     );
@@ -164,7 +165,7 @@ export default function CourseDetailPage() {
                 className="flex h-10 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
                 {enrolling ? (
-                  <Loader2 className="size-4 animate-spin" />
+                  <Spinner />
                 ) : (
                   "Enroll Now"
                 )}

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { GripVertical, Eye, Lock, Pencil, Trash2, Check, Loader2, AlertCircle } from "lucide-react";
+import { GripVertical, Eye, Lock, Pencil, Trash2, Check, AlertCircle } from "lucide-react";
+import { Spinner } from "@/components/shared/spinner";
+import { StatusBadge } from "@/components/shared/status-badge";
 import type { Lesson, QuizContent } from "./types";
 import { lessonTypeConfig, formatDuration } from "./types";
 
@@ -91,15 +93,7 @@ export function LessonRow({
       )}
 
       {/* Status badge */}
-      <span
-        className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-          lesson.status === "PUBLISHED"
-            ? "bg-emerald-50 text-emerald-700"
-            : "bg-amber-50 text-amber-700"
-        }`}
-      >
-        {lesson.status === "PUBLISHED" ? "Published" : "Draft"}
-      </span>
+      <StatusBadge status={lesson.status} />
 
       {/* Video processing indicator */}
       {lesson.contentType === "VIDEO" && (
@@ -120,9 +114,9 @@ export function LessonRow({
           }
         >
           {isProcessing ? (
-            <Loader2 className="size-3 text-blue-500 animate-spin" />
+            <Spinner size="3" className="text-blue-500" />
           ) : isPending ? (
-            <Loader2 className="size-3 text-muted-foreground/50 animate-spin" />
+            <Spinner size="3" className="text-muted-foreground/50" />
           ) : isFailed ? (
             <AlertCircle className="size-3 text-red-500" />
           ) : isReady || hasContent ? (

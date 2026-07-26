@@ -6,6 +6,7 @@ import type { Lesson, Chapter, LessonType } from "./types";
 import { lessonTypeConfig } from "./types";
 import { PortalDropdown } from "./portal-dropdown";
 import { LessonRow } from "./lesson-row";
+import { DraftCountBadge } from "@/components/shared/status-badge";
 
 export function ChapterCard({
   chapter,
@@ -108,11 +109,7 @@ export function ChapterCard({
           {chapter.lessons.length} lesson{chapter.lessons.length !== 1 ? "s" : ""}
         </span>
 
-        {draftCount > 0 && (
-          <span className="shrink-0 rounded-full bg-amber-50 text-amber-700 px-1.5 py-0.5 text-[10px] font-medium">
-            {draftCount} draft{draftCount !== 1 ? "s" : ""}
-          </span>
-        )}
+        <DraftCountBadge count={draftCount} />
 
         {/* Chapter Preview Toggle */}
         {chapter.lessons.length > 0 && (

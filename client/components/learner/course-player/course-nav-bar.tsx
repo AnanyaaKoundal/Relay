@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Spinner } from "@/components/shared/spinner";
 
 type CourseNavBarProps = {
   courseTitle: string;
@@ -53,7 +54,7 @@ export function CourseNavBar({
           className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
           {isCompleting ? (
-            <Loader2 className="size-3.5 animate-spin" />
+            <Spinner size="3.5" />
           ) : (
             <CheckCircle2 className="size-3.5" />
           )}

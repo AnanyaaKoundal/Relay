@@ -22,9 +22,7 @@ import {
   PublishToolbar,
   type Chapter,
 } from "@/components/studio/course-builder";
-import {
-  Loader2,
-} from "lucide-react";
+import { Spinner } from "@/components/shared/spinner";
 import { useChapterManager } from "@/hooks/useChapterManager";
 import { useLessonManager } from "@/hooks/useLessonManager";
 import { ActionBar } from "@/components/studio/course-builder/action-bar";
@@ -195,7 +193,7 @@ export default function CourseBuilderWorkspace() {
   if (loading) {
     return (
       <div className="flex min-h-80 items-center justify-center text-muted-foreground text-sm gap-2">
-        <Loader2 className="size-4 animate-spin" />
+        <Spinner />
         Loading course...
       </div>
     );

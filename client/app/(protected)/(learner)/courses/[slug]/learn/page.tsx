@@ -13,7 +13,8 @@ import { CourseNavBar } from "@/components/learner/course-player/course-nav-bar"
 import { VideoPlayer } from "@/components/learner/course-player/VideoPlayer";
 import { TextRenderer } from "@/components/learner/course-player/text-renderer";
 import { QuizPlayer } from "@/components/learner/course-player/quiz-player";
-import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Spinner } from "@/components/shared/spinner";
 
 export default function LearnPage() {
   const params = useParams();
@@ -117,7 +118,7 @@ export default function LearnPage() {
   if (loading || !enrollment) {
     return (
       <div className="flex items-center justify-center py-24 text-muted-foreground text-sm gap-2">
-        <Loader2 className="size-4 animate-spin" />
+        <Spinner />
         Loading course...
       </div>
     );
@@ -151,7 +152,7 @@ export default function LearnPage() {
           <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 space-y-6">
             {contentLoading ? (
               <div className="flex items-center justify-center py-12 text-muted-foreground text-sm gap-2">
-                <Loader2 className="size-4 animate-spin" />
+                <Spinner />
                 Loading lesson...
               </div>
             ) : !lessonContent ? (

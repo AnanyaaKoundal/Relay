@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getMyCourses } from "@/services/course.service";
 import type { CourseListItem } from "@/types/course.types";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { EmptyState } from "@/components/shared/empty-state";
 
 export default function StudioOverviewPage() {
   const [courses, setCourses] = useState<CourseListItem[]>([]);
@@ -50,10 +52,10 @@ export default function StudioOverviewPage() {
           <Link href="/studio/courses" className="text-xs text-muted-foreground hover:text-foreground transition-colors">View all</Link>
         </div>
         {!loading && courses.length === 0 ? (
-          <div className="mt-4 rounded-xl border border-dashed bg-card p-8 text-center">
-            <p className="text-sm text-muted-foreground">No courses yet.</p>
-            <Link href="/studio/courses/new" className="mt-3 inline-flex h-9 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/80">Create your first course</Link>
-          </div>
+          <EmptyState
+            title="No courses yet."
+            action={{ label: "Create your first course", href: "/studio/courses/new" }}
+          />
         ) : (
           <div className="mt-4 space-y-2">
             {courses.slice(0, 5).map((course) => (
@@ -62,11 +64,7 @@ export default function StudioOverviewPage() {
                   <p className="text-sm font-medium">{course.title}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{course._count.chapters} chapters · {course._count.enrollments} enrolled</p>
                 </div>
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                  course.status === "PUBLISHED" ? "bg-green-100 text-green-800" :
-                  course.status === "DRAFT" ? "bg-yellow-100 text-yellow-800" :
-                  "bg-blue-100 text-blue-800"
-                }`}>{course.status.replace("_", " ")}</span>
+                <StatusBadge status={course.status} />
               </Link>
             ))}
           </div>

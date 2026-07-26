@@ -3,7 +3,8 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, Mail, Lock, User, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { Spinner } from "@/components/shared/spinner";
 import { registerSchema } from "@/validation/auth.validation";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -100,7 +101,7 @@ export default function SignUpPage() {
         {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">{error}</div>}
 
         <button type="submit" disabled={loading} className="inline-flex h-10 items-center justify-center rounded-xl bg-emerald-600 px-4 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-emerald-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed">
-          {loading ? <Loader2 className="size-4 animate-spin" /> : "Create Account"}
+          {loading ? <Spinner /> : "Create Account"}
         </button>
       </form>
 

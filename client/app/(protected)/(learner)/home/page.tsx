@@ -10,7 +10,9 @@ import {
   listEnrolledCourses,
 } from "@/services/enrollment.service";
 import type { Enrollment } from "@/types/enrollment.types";
-import { ArrowRight, BookOpen, Sparkles, Clock, Loader2 } from "lucide-react";
+import { ArrowRight, BookOpen, Sparkles, Clock } from "lucide-react";
+import { Spinner } from "@/components/shared/spinner";
+import { EmptyState } from "@/components/shared/empty-state";
 
 function SectionHeader({
   icon: Icon,
@@ -46,15 +48,6 @@ function CourseRow({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 sm:-mx-6 sm:px-6">
       {children}
-    </div>
-  );
-}
-
-function EmptyState({ message }: { message: string }) {
-  return (
-    <div className="rounded-xl border bg-card p-8 text-center">
-      <BookOpen className="size-10 mx-auto text-muted-foreground/50 mb-3" />
-      <p className="text-sm text-muted-foreground">{message}</p>
     </div>
   );
 }
@@ -154,7 +147,7 @@ export default function HomePage() {
         />
         {loading ? (
           <div className="flex items-center justify-center py-12 text-muted-foreground text-sm gap-2">
-            <Loader2 className="size-4 animate-spin" />
+            <Spinner />
             Loading courses...
           </div>
         ) : courses.length > 0 ? (
@@ -173,7 +166,7 @@ export default function HomePage() {
             ))}
           </CourseRow>
         ) : (
-          <EmptyState message="No courses available yet. Check back soon!" />
+          <EmptyState title="No courses available yet. Check back soon!" />
         )}
       </section>
 

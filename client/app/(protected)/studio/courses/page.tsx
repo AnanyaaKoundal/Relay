@@ -15,25 +15,7 @@ import {
   Users,
   GripVertical,
 } from "lucide-react";
-
-const statusConfig: Record<string, { label: string; className: string }> = {
-  DRAFT: {
-    label: "Draft",
-    className: "bg-amber-50 text-amber-700 border-amber-200",
-  },
-  PENDING_APPROVAL: {
-    label: "Pending",
-    className: "bg-blue-50 text-blue-700 border-blue-200",
-  },
-  PUBLISHED: {
-    label: "Published",
-    className: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  },
-  REJECTED: {
-    label: "Rejected",
-    className: "bg-red-50 text-red-700 border-red-200",
-  },
-};
+import { StatusBadge, DraftCountBadge } from "@/components/shared/status-badge";
 
 type FilterTab = "all" | "PUBLISHED" | "DRAFT";
 
@@ -162,10 +144,6 @@ export default function StudioCoursesPage() {
       ) : (
         <div className="mt-6 space-y-3">
           {filtered.map((course) => {
-            const status = statusConfig[course.status] ?? {
-              label: course.status,
-              className: "bg-muted text-muted-foreground border-border",
-            };
             const draftCount = course.chapters?.reduce(
               (acc, ch) => acc + ch.lessons.length,
               0
@@ -212,16 +190,8 @@ export default function StudioCoursesPage() {
                     >
                       {course.title}
                     </Link>
-                    <span
-                      className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium ${status.className}`}
-                    >
-                      {status.label}
-                    </span>
-                    {course.status === "PUBLISHED" && draftCount > 0 && (
-                      <span className="shrink-0 rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-[10px] font-medium">
-                        {draftCount} draft{draftCount !== 1 ? "s" : ""}
-                      </span>
-                    )}
+                    <StatusBadge status={course.status} />
+                    <DraftCountBadge count={course.status === "PUBLISHED" ? draftCount : 0} />
                   </div>
                   <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">

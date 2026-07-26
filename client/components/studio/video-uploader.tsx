@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { Upload, CheckCircle2, Loader2, Pencil } from "lucide-react";
+import { Upload, CheckCircle2, Pencil } from "lucide-react";
+import { Spinner } from "@/components/shared/spinner";
 
 type UploadStatus = "idle" | "uploading" | "done";
 
@@ -52,7 +53,7 @@ export function VideoUploader({
         {status === "uploading" && file ? (
           <div className="p-6 space-y-3">
             <div className="flex items-center gap-2 justify-center">
-              <Loader2 className="size-4 animate-spin text-primary" />
+              <Spinner className="text-primary" />
               <span className="text-sm font-medium">Uploading...</span>
             </div>
             <div className="text-xs text-muted-foreground text-center">

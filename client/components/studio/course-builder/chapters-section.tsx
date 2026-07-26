@@ -1,14 +1,9 @@
 "use client";
 
-import {
-    Chapter,
-    ChapterCard,
-} from "@/components/studio/course-builder";
-import {
-    Plus,
-    BookOpen,
-} from "lucide-react";
-import { LessonType } from "./types";
+import { ChapterCard, type Chapter } from "@/components/studio/course-builder";
+import { Plus } from "lucide-react";
+import { EmptyState } from "@/components/shared/empty-state";
+import type { LessonType } from "./types";
 
 export function ChapterSection({
     chapters,
@@ -56,23 +51,11 @@ export function ChapterSection({
             </div>
 
             {chapters.length === 0 ? (
-                <div className="rounded-xl border-2 border-dashed bg-card/50 p-10 text-center">
-                    <div className="mx-auto size-12 rounded-full bg-muted flex items-center justify-center mb-3">
-                        <BookOpen className="size-6 text-muted-foreground/40" />
-                    </div>
-                    <p className="text-sm font-medium text-muted-foreground">No chapters yet</p>
-                    <p className="mt-1 text-xs text-muted-foreground/70">
-                        Add chapters to organize your course content.
-                    </p>
-                    <button
-                        type="button"
-                        onClick={onAddChapter}
-                        className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/80 transition-colors"
-                    >
-                        <Plus className="size-4" />
-                        Add First Chapter
-                    </button>
-                </div>
+                <EmptyState
+                    title="No chapters yet"
+                    description="Add chapters to organize your course content."
+                    action={{ label: "Add First Chapter", onClick: onAddChapter }}
+                />
             ) : (
                 <div className="space-y-3">
                     {chapters.map((chapter, i) => (

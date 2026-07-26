@@ -1,6 +1,7 @@
 "use client";
 
-import { Send, Undo2, Loader2 } from "lucide-react";
+import { Send, Undo2 } from "lucide-react";
+import { Spinner } from "@/components/shared/spinner";
 
 export function PublishToolbar({
   selectedCount,
@@ -35,7 +36,7 @@ export function PublishToolbar({
           className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/80 transition-colors disabled:opacity-50"
         >
           {publishing ? (
-            <Loader2 className="size-3.5 animate-spin" />
+            <Spinner size="3.5" />
           ) : (
             <Send className="size-3.5" />
           )}
@@ -51,7 +52,7 @@ export function PublishToolbar({
           className="inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
         >
           {publishing ? (
-            <Loader2 className="size-3.5 animate-spin" />
+            <Spinner size="3.5" />
           ) : (
             <Undo2 className="size-3.5" />
           )}

@@ -6,7 +6,9 @@ import {
   listEnrolledCourses,
 } from "@/services/enrollment.service";
 import type { Enrollment } from "@/types/enrollment.types";
-import { BookOpen, Loader2 } from "lucide-react";
+import { BookOpen } from "lucide-react";
+import { Spinner } from "@/components/shared/spinner";
+import { EmptyState } from "@/components/shared/empty-state";
 
 export default function MyCoursesPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -23,7 +25,7 @@ export default function MyCoursesPage() {
     return (
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
         <div className="flex items-center justify-center py-12 text-muted-foreground text-sm gap-2">
-          <Loader2 className="size-4 animate-spin" />
+          <Spinner />
           Loading your courses...
         </div>
       </div>
@@ -67,18 +69,10 @@ export default function MyCoursesPage() {
           })}
         </div>
       ) : (
-        <div className="rounded-xl border bg-card p-12 text-center">
-          <BookOpen className="size-10 mx-auto text-muted-foreground/50 mb-3" />
-          <p className="text-sm text-muted-foreground">
-            You haven&apos;t enrolled in any courses yet.
-          </p>
-          <a
-            href="/courses"
-            className="mt-3 inline-flex h-9 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-          >
-            Browse Courses
-          </a>
-        </div>
+        <EmptyState
+          title="You haven't enrolled in any courses yet."
+          action={{ label: "Browse Courses", href: "/courses" }}
+        />
       )}
     </div>
   );

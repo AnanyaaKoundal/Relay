@@ -7,7 +7,9 @@ import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { browseCourses } from "@/services/course.service";
 import type { PublicCourse } from "@/types/course.types";
-import { Search, Users, Star, Loader2 } from "lucide-react";
+import { Search, Users, Star } from "lucide-react";
+import { Spinner } from "@/components/shared/spinner";
+import { EmptyState } from "@/components/shared/empty-state";
 
 const categories = [
   "All",
@@ -194,7 +196,7 @@ export default function CoursesPage() {
       {/* Course grid */}
       {loading ? (
         <div className="flex items-center justify-center py-12 text-muted-foreground text-sm gap-2">
-          <Loader2 className="size-4 animate-spin" />
+          <Spinner />
           Loading courses...
         </div>
       ) : courses.length > 0 ? (
@@ -204,23 +206,18 @@ export default function CoursesPage() {
           ))}
         </div>
       ) : (
-        <div className="rounded-xl border bg-card p-12 text-center">
-          <p className="text-sm text-muted-foreground">
-            No courses match your filters.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
+        <EmptyState
+          title="No courses match your filters."
+          action={{
+            label: "Clear all filters",
+            onClick: () => {
               setSearch("");
               setCategory("All");
               setDifficulty("All");
               setPriceFilter("all");
-            }}
-            className="mt-2 text-sm text-primary hover:underline"
-          >
-            Clear all filters
-          </button>
-        </div>
+            },
+          }}
+        />
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
-import { AlertCircle, Loader2, Play } from "lucide-react";
+import { AlertCircle, Play } from "lucide-react";
+import { Spinner } from "@/components/shared/spinner";
 import { useVideoPlayer } from "@/hooks/use-video-player";
 import { ControlBar } from "./ControlBar";
 
@@ -22,7 +23,7 @@ export function VideoPlayer({
   if (processingStatus === "PROCESSING" || processingStatus === "PENDING") {
     return (
       <div className="flex flex-col items-center justify-center aspect-video rounded-xl bg-muted p-8 text-center">
-        <Loader2 className="size-8 text-muted-foreground/50 mb-3 animate-spin" />
+        <Spinner size="8" className="text-muted-foreground/50 mb-3" />
         <p className="text-sm text-muted-foreground">
           Video is being processed. It will be available shortly.
         </p>

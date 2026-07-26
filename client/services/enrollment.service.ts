@@ -1,9 +1,9 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
+import { API_URL } from "@/lib/config";
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(`${BASE_URL}${path}`, {
+    res = await fetch(`${API_URL}${path}`, {
       credentials: "include",
       ...options,
       headers: { "Content-Type": "application/json", ...options.headers },

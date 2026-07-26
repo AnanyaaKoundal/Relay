@@ -10,13 +10,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Video, Clock, Loader2 } from "lucide-react";
+import { Video, Clock } from "lucide-react";
+import { Spinner } from "@/components/shared/spinner";
 import { VideoUploader, useVideoDuration } from "@/components/studio/video-uploader";
 import { presignUpload, completeUpload, uploadFileWithProgress } from "@/services/upload.service";
 import { resolveUrl } from "@/lib/utils";
+import { API_URL } from "@/lib/config";
 import type { VideoContent } from "@/types/lesson.types";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
 
 function formatDuration(s: number) {
   const m = Math.floor(s / 60);
@@ -158,8 +158,8 @@ export function VideoLessonEditor({
             <Button onClick={handleUploadAndSave} disabled={!canSave || isUploading || saving}>
               {isUploading ? (
                 <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Uploading...
+<Spinner />
+                   Uploading...
                 </>
               ) : (
                 "Upload & Save"
