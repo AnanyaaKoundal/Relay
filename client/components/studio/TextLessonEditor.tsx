@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import {
@@ -23,6 +23,7 @@ import {
   Undo,
   Redo,
 } from "lucide-react";
+import { Spinner } from "@/components/shared/spinner";
 import type { TextContent } from "@/types/lesson.types";
 
 function ToolbarBtn({
@@ -134,12 +135,14 @@ export function TextLessonEditor({
   onSave,
   initial,
   lessonTitle,
+  isLoading,
 }: {
   open: boolean;
   onClose: () => void;
   onSave: (data: TextContent, title: string) => void | Promise<void>;
   initial: TextContent;
   lessonTitle: string;
+  isLoading?: boolean;
 }) {
   const [title, setTitle] = useState(lessonTitle);
 
@@ -148,6 +151,12 @@ export function TextLessonEditor({
     content: initial.body || "",
     immediatelyRender: false,
   });
+
+  useEffect(() => {
+    if (editor && initial.body !== undefined) {
+      editor.commands.setContent(initial.body || "");
+    }
+  }, [editor, initial.body]);
 
   const handleSave = useCallback(async () => {
     if (!editor) return;
@@ -161,10 +170,16 @@ export function TextLessonEditor({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="size-4 text-emerald-500" />
-            Edit Text Lesson
+            {isLoading ? "Loading..." : "Edit Text Lesson"}
           </DialogTitle>
         </DialogHeader>
 
+        {isLoading ? (
+          <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground text-sm">
+            <Spinner />
+            Loading content...
+          </div>
+        ) : (
         <div className="space-y-4 py-2">
           <div>
             <label className="text-xs font-medium text-muted-foreground">Lesson Title</label>
@@ -189,12 +204,13 @@ export function TextLessonEditor({
             </div>
           </div>
         </div>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>Save Lesson</Button>
+          {!isLoading && <Button onClick={handleSave}>Save Lesson</Button>}
         </DialogFooter>
       </DialogContent>
     </Dialog>

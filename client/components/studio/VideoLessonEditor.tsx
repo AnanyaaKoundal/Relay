@@ -31,6 +31,7 @@ export function VideoLessonEditor({
   initial,
   lessonTitle,
   lessonId,
+  isLoading,
   onResolveLessonId,
 }: {
   open: boolean;
@@ -39,6 +40,7 @@ export function VideoLessonEditor({
   initial: VideoContent;
   lessonTitle: string;
   lessonId: string;
+  isLoading?: boolean;
   onResolveLessonId?: () => Promise<string>;
 }) {
   const [title, setTitle] = useState(lessonTitle);
@@ -100,10 +102,16 @@ export function VideoLessonEditor({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Video className="size-4 text-blue-500" />
-            {hasExistingVideo ? "Edit Video Lesson" : "New Video Lesson"}
+            {isLoading ? "Loading..." : hasExistingVideo ? "Edit Video Lesson" : "New Video Lesson"}
           </DialogTitle>
         </DialogHeader>
 
+        {isLoading ? (
+          <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground text-sm">
+            <Spinner />
+            Loading content...
+          </div>
+        ) : (
         <div className="space-y-5 py-2">
           <div>
             <label className="text-xs font-medium text-muted-foreground">Lesson Title</label>
@@ -147,12 +155,13 @@ export function VideoLessonEditor({
             </div>
           )}
         </div>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isUploading}>
             Cancel
           </Button>
-          {hasExistingVideo ? (
+          {!isLoading && (hasExistingVideo ? (
             <Button onClick={handleSave}>Save</Button>
           ) : (
             <Button onClick={handleUploadAndSave} disabled={!canSave || isUploading || saving}>
@@ -165,7 +174,7 @@ export function VideoLessonEditor({
                 "Upload & Save"
               )}
             </Button>
-          )}
+          ))}
         </DialogFooter>
       </DialogContent>
     </Dialog>

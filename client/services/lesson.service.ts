@@ -1,8 +1,4 @@
 import type {
-  LessonType,
-  VideoContentData,
-  TextContentData,
-  QuizContentData,
   LessonItem,
   CreateLessonInput,
   UpdateLessonInput,
@@ -82,4 +78,8 @@ export async function unpublishLessons(lessonIds: string[]): Promise<{ unpublish
     method: "POST",
     body: JSON.stringify({ lessonIds }),
   });
+}
+
+export async function getProcessingStatus(courseId: string): Promise<{ lessonId: string; processingStatus: string }[]> {
+  return request(`/lessons/processing-status/${courseId}`);
 }

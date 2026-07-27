@@ -409,3 +409,32 @@ export async function unpublishLessons(instructorId: string, lessonIds: string[]
 
   return { unpublished: updated };
 }
+
+export async function getLessonProcessingStatus(courseId: string) {
+  const videoLessons = await prisma.lesson.findMany({
+    where: {
+      chapter: { courseId },
+      contentType: "VIDEO",
+      contentId: { not: "" },
+    },
+    select: { id: true, contentId: true },
+
+  });
+
+  const contentIds = videoLessons.map(l => l.contentId);
+
+  const videoContents = await prisma.videoContent.findMany({
+    where: {
+      id: { in: contentIds },
+      processingStatus: { in: ["PENDING", "PROCESSING"] },
+    },
+    select: { id: true, processingStatus: true },
+  });
+
+  const statusMap = new Map(videoContents.map(vc => [vc.id, vc.processingStatus]));
+
+  return videoLessons
+    .filter(l => statusMap.has(l.contentId))
+    .map(l => ({ lessonId: l.id, processingStatus: statusMap.get(l.contentId) }));
+
+}

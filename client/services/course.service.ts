@@ -67,10 +67,6 @@ export async function getMyCourses(): Promise<CourseListItem[]> {
   return request<CourseListItem[]>("/courses/instructor");
 }
 
-export async function getCourse(courseId: string): Promise<CourseDetail> {
-  return request<CourseDetail>(`/courses/instructor/${courseId}`);
-}
-
 export async function createCourse(input: CreateCourseInput): Promise<CourseDetail> {
   return request<CourseDetail>("/courses/instructor", {
     method: "POST",

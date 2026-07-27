@@ -3,7 +3,6 @@ import {
   browseCourses,
   getPublicCourse,
   listInstructorCourses,
-  getInstructorCourse,
   createCourse,
   updateCourse,
   deleteCourse,
@@ -30,12 +29,6 @@ router.get(
   authenticate,
   authorize("instructor"),
   getWorkspace);
-router.get(
-  "/instructor/:courseId",
-  authenticate,
-  authorize("instructor"),
-  getInstructorCourse,
-);
 router.post(
   "/instructor",
   authenticate,

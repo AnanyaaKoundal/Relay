@@ -13,6 +13,7 @@ interface UseCourseActionsParams {
   title: string;
   description: string;
   chapters: Chapter[];
+  setChapters: React.Dispatch<React.SetStateAction<Chapter[]>>;
   allLessons: Lesson[];
   selectedLessons: Set<string>;
   setSelectedLessons: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -31,6 +32,7 @@ export function useCourseActions({
   title,
   description,
   chapters,
+  setChapters,
   allLessons,
   selectedLessons,
   setSelectedLessons,
@@ -68,6 +70,7 @@ export function useCourseActions({
     try {
       const updated = await updateCourse(courseId, { status: "PUBLISHED" });
       setCourse((prev) => (prev ? { ...prev, ...updated } : prev));
+
       await refreshLessonStatuses();
     } catch (err) {
       await confirm({
@@ -107,7 +110,12 @@ export function useCourseActions({
     try {
       await lessonApi.publishLessons(ids);
       setSelectedLessons(new Set());
-      await refreshLessonStatuses();
+      setChapters(prev => prev.map(ch => ({
+        ...ch,
+        lessons: ch.lessons.map(l =>
+          ids.includes(l.id) ? { ...l, status: "PUBLISHED" as const } : l
+        )
+      })));
     } catch { /* silent */ } finally {
       setPublishing(false);
     }
@@ -121,7 +129,12 @@ export function useCourseActions({
     try {
       await lessonApi.unpublishLessons(ids);
       setSelectedLessons(new Set());
-      await refreshLessonStatuses();
+      setChapters(prev => prev.map(ch => ({
+        ...ch,
+        lessons: ch.lessons.map(l =>
+          ids.includes(l.id) ? { ...l, status: "DRAFT" as const } : l
+        )
+      })));
     } catch { /* silent */ } finally {
       setPublishing(false);
     }
@@ -148,7 +161,14 @@ export function useCourseActions({
         await chapterApi.publishChapterTitles(chapterIds);
       }
       setSelectedLessons(new Set());
-      await refreshLessonStatuses();
+      setChapters(prev => prev.map(ch => ({
+        ...ch,
+        title: ch.titleDraft ?? ch.title,
+        titleDraft: null,
+        lessons: ch.lessons.map(l =>
+          draftIds.includes(l.id) ? { ...l, status: "PUBLISHED" as const } : l
+        )
+      })));
     } catch (err) {
       await confirm({
         title: "Publish failed",

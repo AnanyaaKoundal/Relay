@@ -15,14 +15,4 @@ function quizToBackendPayload(quiz: QuizContent) {
     }));
 }
 
-// async function loadAllChapters(courseId: string): Promise<Chapter[]> {
-//     const workspace = await courseApi.getCourseWorkspace(courseId);
-//     const chapters: Chapter[] = [];
-//     for (const ch of chs) {
-//         const lessons = await lessonApi.listLessons(ch.id);
-//         chapters.push(mapBackendChapter({ ...ch, lessons }));
-//     }
-//     return chapters;
-// }
-
 export { quizToBackendPayload };

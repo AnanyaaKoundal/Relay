@@ -49,24 +49,6 @@ export async function listInstructorCourses(req: Request, res: Response) {
   }
 }
 
-export async function getInstructorCourse(req: Request, res: Response) {
-  try {
-    const course = await courseService.getInstructorCourse(
-      req.user!.userId,
-      String(req.params.courseId),
-    );
-    res.json(course);
-  } catch (err: unknown) {
-    const error = err as Error & { statusCode?: number };
-    if (error.statusCode) {
-      res.status(error.statusCode).json({ error: error.message });
-      return;
-    }
-    logger.error("Failed to get instructor course", { error: error.message });
-    res.status(500).json({ error: "Something went wrong" });
-  }
-}
-
 export async function createCourse(req: Request, res: Response) {
   const parsed = createCourseSchema.safeParse(req.body);
   if (!parsed.success) {

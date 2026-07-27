@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   Circle,
 } from "lucide-react";
+import { Spinner } from "@/components/shared/spinner";
 import type { QuizQuestion, QuizContent } from "@/types/lesson.types";
 
 let qId = 0;
@@ -31,12 +32,14 @@ export function QuizLessonEditor({
   onSave,
   initial,
   lessonTitle,
+  isLoading,
 }: {
   open: boolean;
   onClose: () => void;
   onSave: (data: QuizContent, title: string) => void | Promise<void>;
   initial: QuizContent;
   lessonTitle: string;
+  isLoading?: boolean;
 }) {
   const [title, setTitle] = useState(lessonTitle);
   const [questions, setQuestions] = useState<QuizQuestion[]>(initial.questions);
@@ -111,10 +114,16 @@ export function QuizLessonEditor({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <HelpCircle className="size-4 text-amber-500" />
-            Edit Quiz
+            {isLoading ? "Loading..." : "Edit Quiz"}
           </DialogTitle>
         </DialogHeader>
 
+        {isLoading ? (
+          <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground text-sm">
+            <Spinner />
+            Loading content...
+          </div>
+        ) : (
         <div className="space-y-4 py-2">
           <div>
             <label className="text-xs font-medium text-muted-foreground">Quiz Title</label>
@@ -213,12 +222,13 @@ export function QuizLessonEditor({
             </button>
           </div>
         </div>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>Save Quiz</Button>
+          {!isLoading && <Button onClick={handleSave}>Save Quiz</Button>}
         </DialogFooter>
       </DialogContent>
     </Dialog>

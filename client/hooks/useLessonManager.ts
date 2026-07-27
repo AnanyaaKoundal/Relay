@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as lessonApi from "@/services/lesson.service";
 import { quizToBackendPayload } from "@/lib/course-builder-utils";
 import type {
@@ -9,10 +9,12 @@ import type {
     VideoContent,
     TextContent,
     QuizContent,
+    LessonItem,
 } from "@/types/lesson.types";
 import {
     type Chapter,
 } from "@/components/studio/course-builder";
+import { getLesson } from "@/services/lesson.service";
 
 interface useLessonManagerParams {
     editorLesson: { chapterId: string; lessonId: string; } | null,
@@ -37,6 +39,22 @@ export function useLessonManager({
 }: useLessonManagerParams) {
 
     const editorLessonRef = useRef(editorLesson);
+
+
+    const [editorLessonContent, setEditorLessonContent] = useState<LessonItem | null>(null);
+
+    useEffect(() => {
+        setEditorLessonContent(null);
+        if (!editorLesson || editorLesson.lessonId.startsWith("temp_")) return;
+
+        let cancelled = false;
+        getLesson(editorLesson.lessonId).then(lesson => {
+            if (!cancelled) setEditorLessonContent(lesson);
+        });
+        return () => { cancelled = true; };
+
+
+    }, [editorLesson])
 
     /* ── Add Lesson (deferred: only opens editor, no backend call, no UI row) ── */
     const handleAddLesson = useCallback(async (chapterId: string, type: LessonType) => {
@@ -240,6 +258,7 @@ export function useLessonManager({
     const handleEditorClose = useCallback(async (chapterId: string, lessonId: string) => {
         setEditorLesson(null);
         setTempLessonMeta(null);
+        setEditorLessonContent(null);
 
         const pending = pendingLessonRef.current;
         if (pending && pending.chapterId === chapterId) {
@@ -272,14 +291,16 @@ export function useLessonManager({
     /* ── Find the lesson being edited ── */
     function findEditingLesson() {
         if (!editorLesson) return null;
-        // Check real chapters first
+
+        // Existing lesson: return from chapters (content may be null while loading)
         for (const ch of chapters) {
             if (ch.id === editorLesson.chapterId) {
-                const lesson = ch.lessons.find((l) => l.id === editorLesson.lessonId);
-                if (lesson) return lesson;
+                const lesson = ch.lessons.find(l => l.id === editorLesson.lessonId);
+                if (lesson) return { ...lesson, content: lesson.content ?? editorLessonContent?.content ?? null };
             }
         }
-        // Fallback: temp lesson not yet in chapters
+
+        // Temp lesson
         if (tempLessonMeta && editorLesson.chapterId === tempLessonMeta.chapterId) {
             return {
                 id: editorLesson.lessonId,

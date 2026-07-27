@@ -8,6 +8,7 @@ import {
   reorderLessons,
   publishLessons,
   unpublishLessons,
+  getLessonProcessingStatus
 } from "./lessons.controller.js";
 import { authenticate } from "../../middleware/authenticate.js";
 import { authorize } from "../../middleware/authorize.js";
@@ -23,6 +24,7 @@ router.post("/unpublish", unpublishLessons);
 router.get("/chapter/:chapterId", listLessons);
 router.post("/chapter/:chapterId", createLesson);
 router.put("/chapter/:chapterId/reorder", reorderLessons);
+router.get("/processing-status/:courseId", getLessonProcessingStatus)
 router.get("/:lessonId", getLesson);
 router.patch("/:lessonId", updateLesson);
 router.delete("/:lessonId", deleteLesson);

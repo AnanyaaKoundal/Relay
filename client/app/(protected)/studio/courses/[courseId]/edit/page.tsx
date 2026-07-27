@@ -133,7 +133,7 @@ export default function CourseBuilderWorkspace() {
   }, [params?.courseId]);
 
   /* ── Auto-poll PROCESSING/PENDING lessons ── */
-  const { markSaved } = useProcessingPolling(allLessons, refreshLessonStatuses);
+  const { markSaved } = useProcessingPolling(params!.courseId, chapters, setChapters);
 
   /* ── Course publish/save actions (extracted) ── */
   const {
@@ -150,6 +150,7 @@ export default function CourseBuilderWorkspace() {
     title,
     description,
     chapters,
+    setChapters,
     allLessons,
     selectedLessons,
     setSelectedLessons,
@@ -187,6 +188,7 @@ export default function CourseBuilderWorkspace() {
 
   const totalLessons = chapters.reduce((acc, c) => acc + c.lessons.length, 0);
   const editingLesson = findEditingLesson();
+  const isContentLoading = editorLesson && !editorLesson.lessonId.startsWith("temp_") && editingLesson && !editingLesson.content;
 
   if (loading) {
     return (
@@ -274,6 +276,7 @@ export default function CourseBuilderWorkspace() {
           initial={(editingLesson.content as VideoContent) ?? { videoUrl: "", durationSeconds: null, resources: [] }}
           lessonTitle={editingLesson.title}
           lessonId={editingLesson.id}
+          isLoading={!!isContentLoading}
           onResolveLessonId={
             editingLesson.id.startsWith("temp_")
               ? () => {
@@ -291,6 +294,7 @@ export default function CourseBuilderWorkspace() {
           onSave={(data, t) => handleSaveContent("TEXT", data, t)}
           initial={(editingLesson.content as TextContent) ?? { body: "" }}
           lessonTitle={editingLesson.title}
+          isLoading={!!isContentLoading}
         />
       )}
       {editingLesson && editingLesson.contentType === "QUIZ" && (
@@ -300,6 +304,7 @@ export default function CourseBuilderWorkspace() {
           onSave={(data, t) => handleSaveContent("QUIZ", data, t)}
           initial={(editingLesson.content as QuizContent) ?? { questions: [] }}
           lessonTitle={editingLesson.title}
+          isLoading={!!isContentLoading}
         />
       )}
     </div>

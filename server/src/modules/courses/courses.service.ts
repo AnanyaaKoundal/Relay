@@ -137,30 +137,6 @@ export async function listInstructorCourses(instructorId: string) {
   });
 }
 
-export async function getInstructorCourse(
-  instructorId: string,
-  courseId: string,
-) {
-  const course = await prisma.course.findFirst({
-    where: { id: courseId, instructorId },
-    include: {
-      chapters: {
-        orderBy: { orderIndex: "asc" },
-        include: {
-          lessons: { orderBy: { orderIndex: "asc" } },
-        },
-      },
-      _count: { select: { enrollments: true } },
-    },
-  });
-
-  if (!course) {
-    throw Object.assign(new Error("Course not found"), { statusCode: 404 });
-  }
-
-  return course;
-}
-
 export async function createCourse(
   instructorId: string,
   data: {

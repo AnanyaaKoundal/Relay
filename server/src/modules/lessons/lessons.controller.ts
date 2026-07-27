@@ -58,7 +58,7 @@ export async function createLesson(req: Request, res: Response) {
       String(req.params.chapterId),
       parsed.data,
     );
-    logger.info(`Lesson created: ${lesson.id}`);
+    logger.info(`Lesson created: ${lesson?.id}`);
     res.status(201).json(lesson);
   } catch (err: unknown) {
     const error = err as Error & { statusCode?: number };
@@ -84,7 +84,7 @@ export async function updateLesson(req: Request, res: Response) {
       String(req.params.lessonId),
       parsed.data,
     );
-    logger.info(`Lesson updated: ${lesson.id}`);
+    logger.info(`Lesson updated: ${lesson?.id}`);
     res.json(lesson);
   } catch (err: unknown) {
     const error = err as Error & { statusCode?: number };
@@ -178,6 +178,24 @@ export async function unpublishLessons(req: Request, res: Response) {
     );
     logger.info(`Lessons unpublished: ${result.unpublished.length}`);
     res.json(result);
+  } catch (err: unknown) {
+    const error = err as Error & { statusCode?: number };
+    if (error.statusCode) {
+      res.status(error.statusCode).json({ error: error.message });
+      return;
+    }
+    logger.error("Failed to unpublish lessons", { error: error.message });
+    res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
+export async function getLessonProcessingStatus(req: Request, res: Response) {
+  try {
+    const result = await lessonsService.getLessonProcessingStatus(String(req.params.courseId));
+
+    logger.info(`Lessons in processing for course id ${req.params.courseId} = ${result.length}`);
+    res.json(result);
+
   } catch (err: unknown) {
     const error = err as Error & { statusCode?: number };
     if (error.statusCode) {
