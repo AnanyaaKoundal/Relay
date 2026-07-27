@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { prisma } from "../../lib/prisma.js";
+import { AppError } from "../../lib/app-error.js";
 import { logger } from "../../utils/logger.js";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret";
@@ -23,7 +24,7 @@ export async function register(data: {
 }) {
   const existing = await prisma.user.findUnique({ where: { email: data.email } });
   if (existing) {
-    throw Object.assign(new Error("Email already in use"), { statusCode: 409 });
+    throw new AppError("Email already in use", 409);
   }
 
   const passwordHash = await bcrypt.hash(data.password, 10);
@@ -46,13 +47,13 @@ export async function register(data: {
 export async function login(data: { email: string; password: string }) {
   const user = await prisma.user.findUnique({ where: { email: data.email } });
   if (!user) {
-    throw Object.assign(new Error("Invalid email or password"), { statusCode: 401 });
+    throw new AppError("Invalid email or password", 401);
   }
 
   const valid = await bcrypt.compare(data.password, user.passwordHash);
   if (!valid) {
     logger.warn(`Invalid password attempt for ${data.email}`);
-    throw Object.assign(new Error("Invalid email or password"), { statusCode: 401 });
+    throw new AppError("Invalid email or password", 401);
   }
 
   const token = signToken({
@@ -75,7 +76,7 @@ export async function getCurrentUser(userId: string) {
   });
 
   if (!user) {
-    throw Object.assign(new Error("User not found"), { statusCode: 404 });
+    throw new AppError("User not found", 404);
   }
 
   return user;

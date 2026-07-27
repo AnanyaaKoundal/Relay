@@ -1,118 +1,77 @@
 import type { Request, Response } from "express";
 import { browseCoursesSchema, createCourseSchema, updateCourseSchema } from "./courses.schema.js";
 import * as courseService from "./courses.service.js";
+import { wrap } from "../../middleware/wrap.js";
 import { logger } from "../../utils/logger.js";
 
 /* ─── Public ─── */
 
-export async function browseCourses(req: Request, res: Response) {
+export const browseCourses = wrap(async (req: Request, res: Response) => {
   const parsed = browseCoursesSchema.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid query" });
     return;
   }
 
-  try {
-    const result = await courseService.browseCourses(parsed.data);
-    res.json(result);
-  } catch (err: unknown) {
-    logger.error("Failed to browse courses", { error: (err as Error).message });
-    res.status(500).json({ error: "Something went wrong" });
-  }
-}
+  const result = await courseService.browseCourses(parsed.data);
+  res.json(result);
+});
 
-export async function getPublicCourse(req: Request, res: Response) {
-  try {
-    const slug = String(req.params.slug);
-    const course = await courseService.getPublicCourse(slug);
-    res.json(course);
-  } catch (err: unknown) {
-    const error = err as Error & { statusCode?: number };
-    if (error.statusCode) {
-      res.status(error.statusCode).json({ error: error.message });
-      return;
-    }
-    logger.error("Failed to get course", { error: error.message });
-    res.status(500).json({ error: "Something went wrong" });
-  }
-}
+export const getPublicCourse = wrap(async (req: Request, res: Response) => {
+  const slug = String(req.params.slug);
+  const course = await courseService.getPublicCourse(slug);
+  res.json(course);
+});
 
 /* ─── Instructor ─── */
 
-export async function listInstructorCourses(req: Request, res: Response) {
-  try {
-    const courses = await courseService.listInstructorCourses(req.user!.userId);
-    res.json(courses);
-  } catch (err: unknown) {
-    logger.error("Failed to list instructor courses", { error: (err as Error).message });
-    res.status(500).json({ error: "Something went wrong" });
-  }
-}
+export const listInstructorCourses = wrap(async (req: Request, res: Response) => {
+  const courses = await courseService.listInstructorCourses(req.user!.userId);
+  res.json(courses);
+});
 
-export async function createCourse(req: Request, res: Response) {
+export const createCourse = wrap(async (req: Request, res: Response) => {
   const parsed = createCourseSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Validation failed" });
     return;
   }
 
-  try {
-    const course = await courseService.createCourse(req.user!.userId, parsed.data);
-    logger.info(`Course created: ${course.id} by ${req.user!.userId}`);
-    res.status(201).json(course);
-  } catch (err: unknown) {
-    logger.error("Failed to create course", { error: (err as Error).message });
-    res.status(500).json({ error: "Something went wrong" });
-  }
-}
+  const course = await courseService.createCourse(req.user!.userId, parsed.data);
+  logger.info(`Course created: ${course.id} by ${req.user!.userId}`);
+  res.status(201).json(course);
+});
 
-export async function updateCourse(req: Request, res: Response) {
+export const updateCourse = wrap(async (req: Request, res: Response) => {
   const parsed = updateCourseSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Validation failed" });
     return;
   }
 
-  try {
-    const course = await courseService.updateCourse(
-      req.user!.userId,
-      String(req.params.courseId),
-      parsed.data,
-    );
-    logger.info(`Course updated: ${course.id}`);
-    res.json(course);
-  } catch (err: unknown) {
-    const error = err as Error & { statusCode?: number };
-    if (error.statusCode) {
-      res.status(error.statusCode).json({ error: error.message });
-      return;
-    }
-    logger.error("Failed to update course", { error: error.message });
-    res.status(500).json({ error: "Something went wrong" });
-  }
-}
+  const course = await courseService.updateCourse(
+    req.user!.userId,
+    String(req.params.courseId),
+    parsed.data,
+  );
+  logger.info(`Course updated: ${course.id}`);
+  res.json(course);
+});
 
-export async function deleteCourse(req: Request, res: Response) {
-  try {
-    const courseId = String(req.params.courseId);
-    await courseService.deleteCourse(req.user!.userId, courseId);
-    logger.info(`Course deleted: ${courseId}`);
-    res.json({ message: "Course deleted" });
-  } catch (err: unknown) {
-    const error = err as Error & { statusCode?: number };
-    if (error.statusCode) {
-      res.status(error.statusCode).json({ error: error.message });
-      return;
-    }
-    logger.error("Failed to delete course", { error: error.message });
-    res.status(500).json({ error: "Something went wrong" });
-  }
-}
+export const deleteCourse = wrap(async (req: Request, res: Response) => {
+  const courseId = String(req.params.courseId);
+  await courseService.deleteCourse(req.user!.userId, courseId);
+  logger.info(`Course deleted: ${courseId}`);
+  res.json({ message: "Course deleted" });
+});
 
-export async function getWorkspace(req: Request, res: Response) {
+export const getWorkspace = wrap(async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const courseId = String(req.params.courseId);
   const course = await courseService.getInstructorWorkspace(userId, courseId);
-  if (!course) return res.status(404).json({ error: "Course not found" });
+  if (!course) {
+    res.status(404).json({ error: "Course not found" });
+    return;
+  }
   res.json(course);
-}
+});

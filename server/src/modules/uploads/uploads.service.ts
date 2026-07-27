@@ -3,40 +3,11 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import s3, { S3_BUCKET } from "../../lib/s3.js";
 import { prisma } from "../../lib/prisma.js";
+import { AppError } from "../../lib/app-error.js";
+import { assertLessonOwnership } from "../../lib/ownership.js";
 import queue from "./transcode.queue.js";
 
-const PRESIGN_EXPIRY = 15 * 60; // 15 minutes
-
-async function assertOwnership(instructorId: string, lessonId: string) {
-  const lesson = await prisma.lesson.findUnique({
-    where: { id: lessonId },
-    select: { id: true, chapterId: true },
-  });
-  if (!lesson) {
-    throw Object.assign(new Error("Lesson not found"), { statusCode: 404 });
-  }
-
-  const chapter = await prisma.chapter.findUnique({
-    where: { id: lesson.chapterId },
-    select: { id: true, courseId: true },
-  });
-  if (!chapter) {
-    throw Object.assign(new Error("Chapter not found"), { statusCode: 404 });
-  }
-
-  const course = await prisma.course.findUnique({
-    where: { id: chapter.courseId },
-    select: { id: true, instructorId: true },
-  });
-  if (!course) {
-    throw Object.assign(new Error("Course not found"), { statusCode: 404 });
-  }
-  if (course.instructorId !== instructorId) {
-    throw Object.assign(new Error("Forbidden"), { statusCode: 403 });
-  }
-
-  return { lesson, chapter, course };
-}
+const PRESIGN_EXPIRY = 15 * 60;
 
 export async function generatePresignedUrl(
   instructorId: string,
@@ -44,19 +15,17 @@ export async function generatePresignedUrl(
   fileName: string,
   fileType: string,
 ) {
-  await assertOwnership(instructorId, lessonId);
-
-  const lesson = await prisma.lesson.findUnique({
-    where: { id: lessonId },
-    select: { id: true, chapterId: true },
-  });
-  const chapter = await prisma.chapter.findUnique({
-    where: { id: lesson!.chapterId },
-    select: { courseId: true },
-  });
+  const lesson = await assertLessonOwnership(instructorId, lessonId);
 
   const ext = fileName.split(".").pop() ?? "mp4";
-  const fileKey = `uploads/${chapter!.courseId}/${lessonId}/raw/${randomUUID()}.${ext}`;
+
+  const chapter = await prisma.chapter.findUnique({
+    where: { id: lesson.chapterId },
+    select: { courseId: true },
+  });
+  if (!chapter) throw new AppError("Chapter not found", 404);
+
+  const fileKey = `uploads/${chapter.courseId}/${lessonId}/raw/${randomUUID()}.${ext}`;
 
   const command = new PutObjectCommand({
     Bucket: S3_BUCKET,
@@ -76,14 +45,16 @@ export async function completeUpload(
   lessonId: string,
   fileKey: string,
 ) {
-  await assertOwnership(instructorId, lessonId);
-
   const lesson = await prisma.lesson.findUnique({
     where: { id: lessonId },
-    select: { contentType: true, contentId: true },
+    select: { contentType: true, contentId: true, chapterId: true },
   });
-  if (!lesson || lesson.contentType !== "VIDEO") {
-    throw Object.assign(new Error("Lesson is not a video lesson"), { statusCode: 400 });
+  if (!lesson) throw new AppError("Lesson not found", 404);
+
+  await assertLessonOwnership(instructorId, lessonId);
+
+  if (lesson.contentType !== "VIDEO") {
+    throw new AppError("Lesson is not a video lesson", 400);
   }
 
   const videoUrl = `/s3/${fileKey}`;

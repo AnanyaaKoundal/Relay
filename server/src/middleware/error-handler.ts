@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { AppError } from "../lib/app-error.js";
 import { logger } from "../utils/logger.js";
 
 export function errorHandler(err: Error, _req: Request, res: Response, _next: NextFunction) {
@@ -7,10 +8,15 @@ export function errorHandler(err: Error, _req: Request, res: Response, _next: Ne
     return;
   }
 
-  const statusCode = (err as Error & { statusCode?: number }).statusCode;
+  if (err instanceof AppError) {
+    res.status(err.statusCode).json({ error: err.message });
+    return;
+  }
 
-  if (statusCode) {
-    res.status(statusCode).json({ error: err.message });
+  // Backwards compat: legacy Object.assign errors
+  const legacy = err as Error & { statusCode?: number };
+  if (legacy.statusCode) {
+    res.status(legacy.statusCode).json({ error: err.message });
     return;
   }
 

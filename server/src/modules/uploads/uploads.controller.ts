@@ -1,8 +1,9 @@
 import type { Request, Response } from "express";
 import * as uploadsService from "./uploads.service.js";
+import { wrap } from "../../middleware/wrap.js";
 import { logger } from "../../utils/logger.js";
 
-export async function presignUpload(req: Request, res: Response) {
+export const presignUpload = wrap(async (req: Request, res: Response) => {
   const { fileName, fileType, lessonId } = req.body ?? {};
 
   if (!fileName || !fileType || !lessonId) {
@@ -10,26 +11,16 @@ export async function presignUpload(req: Request, res: Response) {
     return;
   }
 
-  try {
-    const result = await uploadsService.generatePresignedUrl(
-      req.user!.userId,
-      lessonId,
-      fileName,
-      fileType,
-    );
-    res.json(result);
-  } catch (err: unknown) {
-    const error = err as Error & { statusCode?: number };
-    if (error.statusCode) {
-      res.status(error.statusCode).json({ error: error.message });
-      return;
-    }
-    logger.error("Failed to generate presigned URL", { error: error.message });
-    res.status(500).json({ error: "Something went wrong" });
-  }
-}
+  const result = await uploadsService.generatePresignedUrl(
+    req.user!.userId,
+    lessonId,
+    fileName,
+    fileType,
+  );
+  res.json(result);
+});
 
-export async function completeUpload(req: Request, res: Response) {
+export const completeUpload = wrap(async (req: Request, res: Response) => {
   const { lessonId, fileKey } = req.body ?? {};
 
   if (!lessonId || !fileKey) {
@@ -37,20 +28,38 @@ export async function completeUpload(req: Request, res: Response) {
     return;
   }
 
-  try {
-    const result = await uploadsService.completeUpload(
-      req.user!.userId,
-      lessonId,
-      fileKey,
-    );
-    res.json(result);
-  } catch (err: unknown) {
-    const error = err as Error & { statusCode?: number };
-    if (error.statusCode) {
-      res.status(error.statusCode).json({ error: error.message });
-      return;
-    }
-    logger.error("Failed to complete upload", { error: error.message });
-    res.status(500).json({ error: "Something went wrong" });
+  const result = await uploadsService.completeUpload(
+    req.user!.userId,
+    lessonId,
+    fileKey,
+  );
+  res.json(result);
+});
+
+export const proxyUpload = wrap(async (req: Request, res: Response) => {
+  const targetUrl = req.query.url as string;
+  if (!targetUrl) {
+    res.status(400).json({ error: "Missing url query parameter" });
+    return;
   }
-}
+
+  const headers: Record<string, string> = {};
+  if (req.headers["content-type"]) headers["Content-Type"] = req.headers["content-type"];
+  if (req.headers["content-length"]) headers["Content-Length"] = req.headers["content-length"];
+
+  const response = await fetch(targetUrl, {
+    method: "PUT",
+    headers,
+    body: req as unknown as BodyInit,
+    duplex: "half",
+  } as RequestInit);
+
+  if (!response.ok) {
+    const text = await response.text();
+    logger.error("S3 proxy failed", { status: response.status, body: text });
+    res.status(response.status).json({ error: `S3 returned ${response.status}` });
+    return;
+  }
+
+  res.json({ message: "Upload complete" });
+});

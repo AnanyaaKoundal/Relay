@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import { AppError } from "../../lib/app-error.js";
 
 /* ─── Enroll ─── */
 
@@ -8,18 +9,14 @@ export async function enrollInCourse(userId: string, courseId: string) {
     select: { id: true },
   });
   if (!course) {
-    throw Object.assign(new Error("Course not found or not published"), {
-      statusCode: 404,
-    });
+    throw new AppError("Course not found or not published", 404);
   }
 
   const existing = await prisma.enrollment.findUnique({
     where: { userId_courseId: { userId, courseId } },
   });
   if (existing) {
-    throw Object.assign(new Error("Already enrolled in this course"), {
-      statusCode: 409,
-    });
+    throw new AppError("Already enrolled in this course", 409);
   }
 
   return prisma.enrollment.create({
@@ -119,7 +116,7 @@ export async function getLessonContent(
   });
 
   if (!lesson) {
-    throw Object.assign(new Error("Lesson not found"), { statusCode: 404 });
+    throw new AppError("Lesson not found", 404);
   }
 
   const enrollment = await prisma.enrollment.findUnique({
@@ -130,12 +127,9 @@ export async function getLessonContent(
   });
 
   if (!enrollment && !lesson.isPreview) {
-    throw Object.assign(new Error("You must be enrolled to view this lesson"), {
-      statusCode: 403,
-    });
+    throw new AppError("You must be enrolled to view this lesson", 403);
   }
 
-  // Learners see the published snapshot if it exists, otherwise current content
   const resolvedContentId = lesson.publishedContentId ?? lesson.contentId;
 
   let content: Record<string, unknown> | null = null;
@@ -179,7 +173,7 @@ export async function markLessonComplete(
   });
 
   if (!lesson) {
-    throw Object.assign(new Error("Lesson not found"), { statusCode: 404 });
+    throw new AppError("Lesson not found", 404);
   }
 
   const courseId = lesson.chapter.courseId;
@@ -189,19 +183,15 @@ export async function markLessonComplete(
   });
 
   if (!enrollment) {
-    throw Object.assign(new Error("You must be enrolled in this course"), {
-      statusCode: 403,
-    });
+    throw new AppError("You must be enrolled in this course", 403);
   }
 
-  // Upsert progress record
   await prisma.lessonProgress.upsert({
     where: { userId_lessonId: { userId, lessonId } },
     create: { userId, lessonId, enrollmentId: enrollment.id },
     update: {},
   });
 
-  // Recalculate progress percentage (only PUBLISHED lessons)
   const totalLessons = await prisma.lesson.count({
     where: {
       chapter: { courseId },

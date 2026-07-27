@@ -1,5 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
-import { assertCourseOwnership } from "../courses/courses.service.js";
+import { assertCourseOwnership, assertChapterOwnership } from "../../lib/ownership.js";
 
 export async function listChapters(instructorId: string, courseId: string) {
   await assertCourseOwnership(instructorId, courseId);
@@ -52,17 +52,8 @@ export async function updateChapter(
   chapterId: string,
   data: { title?: string; orderIndex?: number },
 ) {
-  const chapter = await prisma.chapter.findUnique({
-    where: { id: chapterId },
-    select: { id: true, courseId: true },
-  });
-  if (!chapter) {
-    throw Object.assign(new Error("Chapter not found"), { statusCode: 404 });
-  }
+  const chapter = await assertChapterOwnership(instructorId, chapterId);
 
-  await assertCourseOwnership(instructorId, chapter.courseId);
-
-  // Check if course is published — if so, title changes go to titleDraft
   const course = await prisma.course.findUnique({
     where: { id: chapter.courseId },
     select: { status: true },
@@ -85,16 +76,7 @@ export async function updateChapter(
 }
 
 export async function deleteChapter(instructorId: string, chapterId: string) {
-  const chapter = await prisma.chapter.findUnique({
-    where: { id: chapterId },
-    select: { id: true, courseId: true },
-  });
-  if (!chapter) {
-    throw Object.assign(new Error("Chapter not found"), { statusCode: 404 });
-  }
-
-  await assertCourseOwnership(instructorId, chapter.courseId);
-
+  await assertChapterOwnership(instructorId, chapterId);
   await prisma.chapter.delete({ where: { id: chapterId } });
 }
 

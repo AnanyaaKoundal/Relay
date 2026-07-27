@@ -1,96 +1,67 @@
 import type { Request, Response } from "express";
 import * as enrollmentService from "./enrollments.service.js";
+import { courseIdParamSchema, lessonIdParamSchema } from "./enrollments.schema.js";
+import { wrap } from "../../middleware/wrap.js";
 import { logger } from "../../utils/logger.js";
 
-export async function enrollInCourse(req: Request, res: Response) {
-  try {
-    const courseId = String(req.params.courseId);
-    const enrollment = await enrollmentService.enrollInCourse(
-      req.user!.userId,
-      courseId,
-    );
-    logger.info(
-      `User ${req.user!.userId} enrolled in course ${courseId}`,
-    );
-    res.status(201).json(enrollment);
-  } catch (err: unknown) {
-    const error = err as Error & { statusCode?: number };
-    if (error.statusCode) {
-      res.status(error.statusCode).json({ error: error.message });
-      return;
-    }
-    logger.error("Failed to enroll in course", { error: error.message });
-    res.status(500).json({ error: "Something went wrong" });
+export const enrollInCourse = wrap(async (req: Request, res: Response) => {
+  const parsed = courseIdParamSchema.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid params" });
+    return;
   }
-}
 
-export async function checkEnrollment(req: Request, res: Response) {
-  try {
-    const courseId = String(req.params.courseId);
-    const enrollment = await enrollmentService.checkEnrollment(
-      req.user!.userId,
-      courseId,
-    );
-    res.json(enrollment);
-  } catch (err: unknown) {
-    const error = err as Error & { statusCode?: number };
-    if (error.statusCode) {
-      res.status(error.statusCode).json({ error: error.message });
-      return;
-    }
-    logger.error("Failed to check enrollment", { error: error.message });
-    res.status(500).json({ error: "Something went wrong" });
-  }
-}
+  const enrollment = await enrollmentService.enrollInCourse(
+    req.user!.userId,
+    parsed.data.courseId,
+  );
+  logger.info(`User ${req.user!.userId} enrolled in course ${parsed.data.courseId}`);
+  res.status(201).json(enrollment);
+});
 
-export async function listEnrolledCourses(req: Request, res: Response) {
-  try {
-    const enrollments = await enrollmentService.listEnrolledCourses(
-      req.user!.userId,
-    );
-    res.json(enrollments);
-  } catch (err: unknown) {
-    logger.error("Failed to list enrolled courses", {
-      error: (err as Error).message,
-    });
-    res.status(500).json({ error: "Something went wrong" });
+export const checkEnrollment = wrap(async (req: Request, res: Response) => {
+  const parsed = courseIdParamSchema.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid params" });
+    return;
   }
-}
 
-export async function getLessonContent(req: Request, res: Response) {
-  try {
-    const lessonId = String(req.params.lessonId);
-    const content = await enrollmentService.getLessonContent(
-      req.user!.userId,
-      lessonId,
-    );
-    res.json(content);
-  } catch (err: unknown) {
-    const error = err as Error & { statusCode?: number };
-    if (error.statusCode) {
-      res.status(error.statusCode).json({ error: error.message });
-      return;
-    }
-    logger.error("Failed to get lesson content", { error: error.message });
-    res.status(500).json({ error: "Something went wrong" });
-  }
-}
+  const enrollment = await enrollmentService.checkEnrollment(
+    req.user!.userId,
+    parsed.data.courseId,
+  );
+  res.json(enrollment);
+});
 
-export async function markLessonComplete(req: Request, res: Response) {
-  try {
-    const lessonId = String(req.params.lessonId);
-    const result = await enrollmentService.markLessonComplete(
-      req.user!.userId,
-      lessonId,
-    );
-    res.json(result);
-  } catch (err: unknown) {
-    const error = err as Error & { statusCode?: number };
-    if (error.statusCode) {
-      res.status(error.statusCode).json({ error: error.message });
-      return;
-    }
-    logger.error("Failed to mark lesson complete", { error: error.message });
-    res.status(500).json({ error: "Something went wrong" });
+export const listEnrolledCourses = wrap(async (req: Request, res: Response) => {
+  const enrollments = await enrollmentService.listEnrolledCourses(req.user!.userId);
+  res.json(enrollments);
+});
+
+export const getLessonContent = wrap(async (req: Request, res: Response) => {
+  const parsed = lessonIdParamSchema.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid params" });
+    return;
   }
-}
+
+  const content = await enrollmentService.getLessonContent(
+    req.user!.userId,
+    parsed.data.lessonId,
+  );
+  res.json(content);
+});
+
+export const markLessonComplete = wrap(async (req: Request, res: Response) => {
+  const parsed = lessonIdParamSchema.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid params" });
+    return;
+  }
+
+  const result = await enrollmentService.markLessonComplete(
+    req.user!.userId,
+    parsed.data.lessonId,
+  );
+  res.json(result);
+});

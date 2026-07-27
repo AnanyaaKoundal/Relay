@@ -1,36 +1,13 @@
 import { prisma } from "../../lib/prisma.js";
-import { assertCourseOwnership } from "../courses/courses.service.js";
+import { AppError } from "../../lib/app-error.js";
+import { assertChapterOwnership, assertLessonOwnership } from "../../lib/ownership.js";
 
 /* ─── Helpers ─── */
-
-async function assertChapterOwnership(instructorId: string, chapterId: string) {
-  const chapter = await prisma.chapter.findUnique({
-    where: { id: chapterId },
-    select: { id: true, courseId: true },
-  });
-  if (!chapter) {
-    throw Object.assign(new Error("Chapter not found"), { statusCode: 404 });
-  }
-  await assertCourseOwnership(instructorId, chapter.courseId);
-  return chapter;
-}
-
-async function assertLessonOwnership(instructorId: string, lessonId: string) {
-  const lesson = await prisma.lesson.findUnique({
-    where: { id: lessonId },
-    select: { id: true, chapterId: true, contentType: true, contentId: true, status: true, publishedContentId: true },
-  });
-  if (!lesson) {
-    throw Object.assign(new Error("Lesson not found"), { statusCode: 404 });
-  }
-  await assertChapterOwnership(instructorId, lesson.chapterId);
-  return lesson;
-}
 
 async function copyContentRecord(contentId: string, contentType: string): Promise<string> {
   if (contentType === "VIDEO") {
     const src = await prisma.videoContent.findUnique({ where: { id: contentId } });
-    if (!src) throw new Error("Video content not found");
+    if (!src) throw new AppError("Video content not found", 404);
     const copy = await prisma.videoContent.create({
       data: {
         s3Key: src.s3Key,
@@ -43,16 +20,16 @@ async function copyContentRecord(contentId: string, contentType: string): Promis
     return copy.id;
   } else if (contentType === "TEXT") {
     const src = await prisma.textContent.findUnique({ where: { id: contentId } });
-    if (!src) throw new Error("Text content not found");
+    if (!src) throw new AppError("Text content not found", 404);
     const copy = await prisma.textContent.create({ data: { body: src.body } });
     return copy.id;
   } else if (contentType === "QUIZ") {
     const src = await prisma.quizContent.findUnique({ where: { id: contentId } });
-    if (!src) throw new Error("Quiz content not found");
+    if (!src) throw new AppError("Quiz content not found", 404);
     const copy = await prisma.quizContent.create({ data: { questions: src.questions } });
     return copy.id;
   }
-  throw new Error(`Unknown content type: ${contentType}`);
+  throw new AppError(`Unknown content type: ${contentType}`, 400);
 }
 
 async function deleteContentRecord(contentId: string, contentType: string) {
@@ -65,8 +42,7 @@ async function deleteContentRecord(contentId: string, contentType: string) {
   }
 }
 
-async function batchEnrichLessons(lessons: { id: string; contentType: string; contentId: string; publishedContentId: string | null;[key: string]: unknown }[]) {
-  // Collect all unique content IDs (both current and published)
+async function batchEnrichLessons(lessons: { id: string; contentType: string; contentId: string; publishedContentId: string | null; [key: string]: unknown }[]) {
   const videoIds = new Set<string>();
   const textIds = new Set<string>();
   const quizIds = new Set<string>();
@@ -84,19 +60,16 @@ async function batchEnrichLessons(lessons: { id: string; contentType: string; co
     }
   }
 
-  // 3 parallel bulk queries instead of N individual ones
   const [videos, texts, quizzes] = await Promise.all([
     videoIds.size ? prisma.videoContent.findMany({ where: { id: { in: [...videoIds] } } }) : [],
     textIds.size ? prisma.textContent.findMany({ where: { id: { in: [...textIds] } } }) : [],
     quizIds.size ? prisma.quizContent.findMany({ where: { id: { in: [...quizIds] } } }) : [],
   ]);
 
-  // Build lookup maps
   const videoMap = new Map(videos.map(v => [v.id, v]));
   const textMap = new Map(texts.map(t => [t.id, t]));
   const quizMap = new Map(quizzes.map(q => [q.id, { ...q, questions: JSON.parse(q.questions as string) }]));
 
-  // Merge back
   return lessons.map(lesson => {
     let content: Record<string, unknown> | null = null;
 
@@ -126,7 +99,7 @@ export async function getLesson(instructorId: string, lessonId: string) {
     where: { id: lessonId },
   });
   if (!lesson) {
-    throw Object.assign(new Error("Lesson not found"), { statusCode: 404 });
+    throw new AppError("Lesson not found", 404);
   }
   await assertChapterOwnership(instructorId, lesson.chapterId);
   const [enriched] = await batchEnrichLessons([lesson]);
@@ -197,7 +170,7 @@ export async function createLesson(
     },
   });
 
-  const [enriched] = await batchEnrichLessons([lesson]);  // ✅ wrap in array
+  const [enriched] = await batchEnrichLessons([lesson]);
   return enriched;
 }
 
@@ -229,9 +202,7 @@ export async function updateLesson(
   if (data.isPreview !== undefined) metaUpdate.isPreview = data.isPreview;
 
   if (lesson.status === "PUBLISHED") {
-    // Dual content: snapshot current content, create new content for edits
     const snapshotId = await copyContentRecord(lesson.contentId, lesson.contentType);
-
     let newContentId = lesson.contentId;
 
     if (lesson.contentType === "VIDEO") {
@@ -240,7 +211,6 @@ export async function updateLesson(
       if (data.s3Key !== undefined) updateData.s3Key = data.s3Key;
       if (data.durationSeconds !== undefined) updateData.durationSeconds = data.durationSeconds;
       if (Object.keys(updateData).length > 0) {
-        // Create a new content record for the draft
         const src = await prisma.videoContent.findUnique({ where: { id: lesson.contentId } });
         const newContent = await prisma.videoContent.create({
           data: {
@@ -269,7 +239,6 @@ export async function updateLesson(
     metaUpdate.publishedContentId = snapshotId;
     metaUpdate.status = "DRAFT";
   } else {
-    // Draft lesson: update content directly (publishedContentId stays for learners)
     if (lesson.contentType === "VIDEO") {
       const updateData: Record<string, unknown> = {};
       if (data.videoUrl !== undefined) updateData.videoUrl = data.videoUrl;
@@ -304,7 +273,6 @@ export async function updateLesson(
 export async function deleteLesson(instructorId: string, lessonId: string) {
   const lesson = await assertLessonOwnership(instructorId, lessonId);
 
-  // Delete both current and published snapshot content
   await deleteContentRecord(lesson.contentId, lesson.contentType);
   if (lesson.publishedContentId) {
     await deleteContentRecord(lesson.publishedContentId, lesson.contentType);
@@ -342,24 +310,18 @@ export async function publishLessons(instructorId: string, lessonIds: string[]) 
     const lesson = await assertLessonOwnership(instructorId, lessonId);
     if (lesson.status !== "DRAFT") continue;
 
-    // Block if video is still processing
     if (lesson.contentType === "VIDEO" && lesson.contentId) {
       const vc = await prisma.videoContent.findUnique({
         where: { id: lesson.contentId },
         select: { processingStatus: true },
       });
       if (vc && vc.processingStatus === "PROCESSING") {
-        throw Object.assign(
-          new Error("Cannot publish a lesson while its video is still processing"),
-          { statusCode: 400 },
-        );
+        throw new AppError("Cannot publish a lesson while its video is still processing", 400);
       }
     }
 
-    // Auto-apply chapter titleDraft
     chapterIdsToPublish.add(lesson.chapterId);
 
-    // Delete the old published snapshot if it exists
     if (lesson.publishedContentId) {
       await deleteContentRecord(lesson.publishedContentId, lesson.contentType);
     }
@@ -372,7 +334,6 @@ export async function publishLessons(instructorId: string, lessonIds: string[]) 
     updated.push(lessonId);
   }
 
-  // Auto-apply chapter titleDrafts for affected chapters
   for (const chapterId of chapterIdsToPublish) {
     const chapter = await prisma.chapter.findUnique({
       where: { id: chapterId },
@@ -396,7 +357,6 @@ export async function unpublishLessons(instructorId: string, lessonIds: string[]
     const lesson = await assertLessonOwnership(instructorId, lessonId);
     if (lesson.status !== "PUBLISHED") continue;
 
-    // Snapshot current content for learners
     const snapshotId = await copyContentRecord(lesson.contentId, lesson.contentType);
 
     await prisma.lesson.update({
@@ -418,7 +378,6 @@ export async function getLessonProcessingStatus(courseId: string) {
       contentId: { not: "" },
     },
     select: { id: true, contentId: true },
-
   });
 
   const contentIds = videoLessons.map(l => l.contentId);
@@ -436,5 +395,4 @@ export async function getLessonProcessingStatus(courseId: string) {
   return videoLessons
     .filter(l => statusMap.has(l.contentId))
     .map(l => ({ lessonId: l.id, processingStatus: statusMap.get(l.contentId) }));
-
 }

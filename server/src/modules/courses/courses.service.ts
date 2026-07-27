@@ -1,5 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
-import { logger } from "../../utils/logger.js";
+import { AppError } from "../../lib/app-error.js";
 
 /* ─── Public ─── */
 
@@ -96,7 +96,7 @@ export async function getPublicCourse(slug: string) {
   });
 
   if (!course) {
-    throw Object.assign(new Error("Course not found"), { statusCode: 404 });
+    throw new AppError("Course not found", 404);
   }
 
   return course;
@@ -176,7 +176,7 @@ export async function updateCourse(
     where: { id: courseId, instructorId },
   });
   if (!existing) {
-    throw Object.assign(new Error("Course not found"), { statusCode: 404 });
+    throw new AppError("Course not found", 404);
   }
 
   const updateData: Record<string, unknown> = { ...data };
@@ -187,10 +187,7 @@ export async function updateCourse(
       where: { courseId, lessons: { some: {} } },
     });
     if (chapterCount === 0) {
-      throw Object.assign(
-        new Error("You need at least one chapter with one lesson before publishing"),
-        { statusCode: 400 },
-      );
+      throw new AppError("You need at least one chapter with one lesson before publishing", 400);
     }
 
     // Validate: no PROCESSING videos
@@ -209,10 +206,7 @@ export async function updateCourse(
         select: { processingStatus: true },
       });
       if (vc && vc.processingStatus === "PROCESSING") {
-        throw Object.assign(
-          new Error("Cannot publish while videos are still processing"),
-          { statusCode: 400 },
-        );
+        throw new AppError("Cannot publish while videos are still processing", 400);
       }
     }
 
@@ -248,26 +242,10 @@ export async function deleteCourse(instructorId: string, courseId: string) {
     where: { id: courseId, instructorId },
   });
   if (!existing) {
-    throw Object.assign(new Error("Course not found"), { statusCode: 404 });
+    throw new AppError("Course not found", 404);
   }
 
   await prisma.course.delete({ where: { id: courseId } });
-}
-
-/* ─── Helpers ─── */
-
-export async function assertCourseOwnership(
-  instructorId: string,
-  courseId: string,
-) {
-  const course = await prisma.course.findFirst({
-    where: { id: courseId, instructorId },
-    select: { id: true },
-  });
-  if (!course) {
-    throw Object.assign(new Error("Course not found"), { statusCode: 404 });
-  }
-  return course;
 }
 
 export async function getInstructorWorkspace(instructorId: string, courseId: string) {
