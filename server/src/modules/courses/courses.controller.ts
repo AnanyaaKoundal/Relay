@@ -126,3 +126,11 @@ export async function deleteCourse(req: Request, res: Response) {
     res.status(500).json({ error: "Something went wrong" });
   }
 }
+
+export async function getWorkspace(req: Request, res: Response) {
+  const userId = req.user!.userId;
+  const courseId = String(req.params.courseId);
+  const course = await courseService.getInstructorWorkspace(userId, courseId);
+  if (!course) return res.status(404).json({ error: "Course not found" });
+  res.json(course);
+}

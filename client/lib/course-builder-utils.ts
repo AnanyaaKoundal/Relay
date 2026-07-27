@@ -1,4 +1,4 @@
-import * as chapterApi from "@/services/chapter.service";
+import * as courseApi from "@/services/course.service";
 import * as lessonApi from "@/services/lesson.service";
 import { QuizContent } from "@/types/lesson.types";
 import {
@@ -15,14 +15,14 @@ function quizToBackendPayload(quiz: QuizContent) {
     }));
 }
 
-async function loadAllChapters(courseId: string): Promise<Chapter[]> {
-    const chs = await chapterApi.listChapters(courseId);
-    const chapters: Chapter[] = [];
-    for (const ch of chs) {
-        const lessons = await lessonApi.listLessons(ch.id);
-        chapters.push(mapBackendChapter({ ...ch, lessons }));
-    }
-    return chapters;
-}
+// async function loadAllChapters(courseId: string): Promise<Chapter[]> {
+//     const workspace = await courseApi.getCourseWorkspace(courseId);
+//     const chapters: Chapter[] = [];
+//     for (const ch of chs) {
+//         const lessons = await lessonApi.listLessons(ch.id);
+//         chapters.push(mapBackendChapter({ ...ch, lessons }));
+//     }
+//     return chapters;
+// }
 
-export { quizToBackendPayload, loadAllChapters };
+export { quizToBackendPayload };

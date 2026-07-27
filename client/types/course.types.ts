@@ -1,3 +1,5 @@
+import type { ChapterItem } from "./chapter.types";
+
 export type CourseStatus = "DRAFT" | "PENDING_APPROVAL" | "PUBLISHED" | "REJECTED";
 
 export type CourseListItem = {
@@ -70,4 +72,9 @@ export type PublicCourseDetail = PublicCourse & {
 export type BrowseResult = {
   courses: PublicCourse[];
   pagination: { page: number; limit: number; total: number; pages: number };
+};
+
+
+export type CourseWorkspace = CourseDetail & {
+  chapters: ChapterItem[];
 };

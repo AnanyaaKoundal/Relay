@@ -7,6 +7,7 @@ import {
   createCourse,
   updateCourse,
   deleteCourse,
+  getWorkspace
 } from "./courses.controller.js";
 import { authenticate } from "../../middleware/authenticate.js";
 import { authorize } from "../../middleware/authorize.js";
@@ -24,6 +25,11 @@ router.get(
   authorize("instructor"),
   listInstructorCourses,
 );
+router.get(
+  "/instructor/:courseId/workspace",
+  authenticate,
+  authorize("instructor"),
+  getWorkspace);
 router.get(
   "/instructor/:courseId",
   authenticate,

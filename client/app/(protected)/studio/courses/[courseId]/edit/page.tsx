@@ -3,14 +3,13 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getCourse } from "@/services/course.service";
+import * as courseApi from "@/services/course.service";
 import { useConfirm } from "@/components/shared/confirm-modal";
 import { useProcessingPolling } from "@/hooks/useProcessingPolling";
 import { useCourseActions } from "@/hooks/useCourseActions";
 import { VideoLessonEditor } from "@/components/studio/VideoLessonEditor";
 import { TextLessonEditor } from "@/components/studio/TextLessonEditor";
 import { QuizLessonEditor } from "@/components/studio/QuizLessonEditor";
-import { loadAllChapters } from "@/lib/course-builder-utils";
 import type {
   LessonType,
   VideoContent,
@@ -21,6 +20,7 @@ import type { CourseDetail } from "@/types/course.types";
 import {
   PublishToolbar,
   type Chapter,
+  mapBackendChapter
 } from "@/components/studio/course-builder";
 import { Spinner } from "@/components/shared/spinner";
 import { useChapterManager } from "@/hooks/useChapterManager";
@@ -68,17 +68,15 @@ export default function CourseBuilderWorkspace() {
 
     async function load() {
       try {
-        const [c, chs] = await Promise.all([
-          getCourse(params!.courseId),
-          loadAllChapters(params!.courseId),
-        ]);
+        const workspace = await courseApi.getCourseWorkspace(params!.courseId);
+
         if (cancelled) return;
 
         if (!cancelled) {
-          setCourse(c);
-          setTitle(c.title);
-          setDescription(c.description);
-          setChapters(chs);
+          setCourse(workspace);
+          setTitle(workspace.title);
+          setDescription(workspace.description);
+          setChapters(workspace.chapters.map(mapBackendChapter));
         }
       } catch {
         if (!cancelled) setCourse(null);
@@ -128,10 +126,10 @@ export default function CourseBuilderWorkspace() {
 
 
 
-  /* ── Refresh lesson statuses from backend ── */
   const refreshLessonStatuses = useCallback(async () => {
     if (!params?.courseId) return;
-    setChapters(await loadAllChapters(params!.courseId));
+    const workspace = await courseApi.getCourseWorkspace(params!.courseId);
+    setChapters(workspace.chapters.map(mapBackendChapter));
   }, [params?.courseId]);
 
   /* ── Auto-poll PROCESSING/PENDING lessons ── */

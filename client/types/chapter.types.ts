@@ -21,4 +21,5 @@ export type ChapterLessonItem = {
   publishedContentId?: string | null;
   chapterId: string;
   content: Record<string, unknown> | null;
+  processingStatus?: string | null;
 };

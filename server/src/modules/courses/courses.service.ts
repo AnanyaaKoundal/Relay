@@ -293,3 +293,58 @@ export async function assertCourseOwnership(
   }
   return course;
 }
+
+export async function getInstructorWorkspace(instructorId: string, courseId: string) {
+  const course = await prisma.course.findFirst({
+    where: { id: courseId, instructorId },
+    include: {
+      chapters: {
+        orderBy: { orderIndex: "asc" },
+        include: {
+          lessons: {
+            orderBy: { orderIndex: "asc" },
+            select: {
+              id: true,
+              title: true,
+              contentType: true,
+              contentId: true,
+              durationSeconds: true,
+              orderIndex: true,
+              isPreview: true,
+              status: true,
+              publishedContentId: true,
+            },
+          },
+        },
+      },
+      _count: { select: { enrollments: true } },
+    },
+  });
+
+  if (!course) return null;
+
+  return {
+    id: course.id,
+    title: course.title,
+    description: course.description,
+    status: course.status,
+    price: course.price,
+    difficulty: course.difficulty,
+    thumbnailUrl: course.thumbnailUrl,
+    createdAt: course.createdAt,
+    updatedAt: course.updatedAt,
+    enrollmentCount: course._count.enrollments,
+    chapters: course.chapters.map((ch) => ({
+      id: ch.id,
+      courseId: course.id,
+      title: ch.title,
+      titleDraft: ch.titleDraft,
+      orderIndex: ch.orderIndex,
+      lessons: ch.lessons.map((l) => ({
+        ...l,
+        chapterId: ch.id,
+        content: null,
+      })),
+    })),
+  };
+}

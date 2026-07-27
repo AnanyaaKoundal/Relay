@@ -6,6 +6,7 @@ import type {
   PublicCourse,
   PublicCourseDetail,
   BrowseResult,
+  CourseWorkspace,
 } from "@/types/course.types";
 import { API_URL } from "@/lib/config";
 
@@ -86,4 +87,8 @@ export async function updateCourse(courseId: string, input: UpdateCourseInput): 
 
 export async function deleteCourse(courseId: string): Promise<void> {
   await request<{ message: string }>(`/courses/instructor/${courseId}`, { method: "DELETE" });
+}
+
+export async function getCourseWorkspace(courseId: string): Promise<CourseWorkspace> {
+  return await request<CourseWorkspace>(`/courses/instructor/${courseId}/workspace`, { method: "GET" })
 }

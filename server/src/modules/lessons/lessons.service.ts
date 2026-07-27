@@ -57,40 +57,55 @@ async function copyContentRecord(contentId: string, contentType: string): Promis
 
 async function deleteContentRecord(contentId: string, contentType: string) {
   if (contentType === "VIDEO") {
-    await prisma.videoContent.delete({ where: { id: contentId } }).catch(() => {});
+    await prisma.videoContent.delete({ where: { id: contentId } }).catch(() => { });
   } else if (contentType === "TEXT") {
-    await prisma.textContent.delete({ where: { id: contentId } }).catch(() => {});
+    await prisma.textContent.delete({ where: { id: contentId } }).catch(() => { });
   } else if (contentType === "QUIZ") {
-    await prisma.quizContent.delete({ where: { id: contentId } }).catch(() => {});
+    await prisma.quizContent.delete({ where: { id: contentId } }).catch(() => { });
   }
 }
 
-async function enrichLessonWithContent(lesson: {
-  id: string;
-  contentType: string;
-  contentId: string;
-  [key: string]: unknown;
-}) {
-  let content: Record<string, unknown> | null = null;
+async function batchEnrichLessons(lessons: { id: string; contentType: string; contentId: string; publishedContentId: string | null;[key: string]: unknown }[]) {
+  // Collect all unique content IDs (both current and published)
+  const videoIds = new Set<string>();
+  const textIds = new Set<string>();
+  const quizIds = new Set<string>();
 
-  if (lesson.contentType === "VIDEO") {
-    content = await prisma.videoContent.findUnique({
-      where: { id: lesson.contentId },
-    });
-  } else if (lesson.contentType === "TEXT") {
-    content = await prisma.textContent.findUnique({
-      where: { id: lesson.contentId },
-    });
-  } else if (lesson.contentType === "QUIZ") {
-    const raw = await prisma.quizContent.findUnique({
-      where: { id: lesson.contentId },
-    });
-    if (raw) {
-      content = { ...raw, questions: JSON.parse(raw.questions as string) };
+  for (const l of lessons) {
+    if (l.contentType === "VIDEO") {
+      if (l.contentId) videoIds.add(l.contentId);
+      if (l.publishedContentId) videoIds.add(l.publishedContentId);
+    } else if (l.contentType === "TEXT") {
+      if (l.contentId) textIds.add(l.contentId);
+      if (l.publishedContentId) textIds.add(l.publishedContentId);
+    } else if (l.contentType === "QUIZ") {
+      if (l.contentId) quizIds.add(l.contentId);
+      if (l.publishedContentId) quizIds.add(l.publishedContentId);
     }
   }
 
-  return { ...lesson, content };
+  // 3 parallel bulk queries instead of N individual ones
+  const [videos, texts, quizzes] = await Promise.all([
+    videoIds.size ? prisma.videoContent.findMany({ where: { id: { in: [...videoIds] } } }) : [],
+    textIds.size ? prisma.textContent.findMany({ where: { id: { in: [...textIds] } } }) : [],
+    quizIds.size ? prisma.quizContent.findMany({ where: { id: { in: [...quizIds] } } }) : [],
+  ]);
+
+  // Build lookup maps
+  const videoMap = new Map(videos.map(v => [v.id, v]));
+  const textMap = new Map(texts.map(t => [t.id, t]));
+  const quizMap = new Map(quizzes.map(q => [q.id, { ...q, questions: JSON.parse(q.questions as string) }]));
+
+  // Merge back
+  return lessons.map(lesson => {
+    let content: Record<string, unknown> | null = null;
+
+    if (lesson.contentType === "VIDEO") content = videoMap.get(lesson.contentId) ?? null;
+    else if (lesson.contentType === "TEXT") content = textMap.get(lesson.contentId) ?? null;
+    else if (lesson.contentType === "QUIZ") content = quizMap.get(lesson.contentId) ?? null;
+
+    return { ...lesson, content };
+  });
 }
 
 /* ─── CRUD ─── */
@@ -103,7 +118,7 @@ export async function listLessons(instructorId: string, chapterId: string) {
     orderBy: { orderIndex: "asc" },
   });
 
-  return Promise.all(lessons.map(enrichLessonWithContent));
+  return await batchEnrichLessons(lessons);
 }
 
 export async function getLesson(instructorId: string, lessonId: string) {
@@ -114,7 +129,8 @@ export async function getLesson(instructorId: string, lessonId: string) {
     throw Object.assign(new Error("Lesson not found"), { statusCode: 404 });
   }
   await assertChapterOwnership(instructorId, lesson.chapterId);
-  return enrichLessonWithContent(lesson);
+  const [enriched] = await batchEnrichLessons([lesson]);
+  return enriched;
 }
 
 export async function createLesson(
@@ -181,7 +197,8 @@ export async function createLesson(
     },
   });
 
-  return enrichLessonWithContent(lesson);
+  const [enriched] = await batchEnrichLessons([lesson]);  // ✅ wrap in array
+  return enriched;
 }
 
 export async function updateLesson(
