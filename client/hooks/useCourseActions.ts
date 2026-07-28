@@ -116,7 +116,13 @@ export function useCourseActions({
           ids.includes(l.id) ? { ...l, status: "PUBLISHED" as const } : l
         )
       })));
-    } catch { /* silent */ } finally {
+    } catch (err) {
+      await confirm({
+        title: "Publish failed",
+        description: err instanceof Error ? err.message : "Something went wrong",
+        confirmLabel: "OK",
+      });
+    } finally {
       setPublishing(false);
     }
   }

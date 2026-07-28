@@ -63,3 +63,13 @@ export const proxyUpload = wrap(async (req: Request, res: Response) => {
 
   res.json({ message: "Upload complete" });
 });
+
+export const retryTranscode = wrap(async (req: Request, res: Response) => {
+  const lessonId = req.params.lessonId as string;
+
+  const result = await uploadsService.retryTranscode(
+    req.user!.userId,
+    lessonId,
+  );
+  res.json(result);
+});

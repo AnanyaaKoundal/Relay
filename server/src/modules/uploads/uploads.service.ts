@@ -72,3 +72,33 @@ export async function completeUpload(
 
   return { message: "Upload complete, transcoding started" };
 }
+
+export async function retryTranscode(instructorId: string, lessonId: string) {
+  const lesson = await assertLessonOwnership(instructorId, lessonId);
+
+  const lessonData = await prisma.lesson.findUnique({
+    where: { id: lessonId },
+    select: { contentType: true, contentId: true },
+  });
+  if (!lessonData) throw new AppError("Lesson not found", 404);
+  if (lessonData.contentType !== "VIDEO") throw new AppError("Lesson is not a video lesson", 400);
+
+  const videoContent = await prisma.videoContent.findUnique({
+    where: { id: lessonData.contentId },
+    select: { s3Key: true },
+  });
+  if (!videoContent?.s3Key) throw new AppError("No video file found for this lesson", 400);
+
+  await prisma.videoContent.update({
+    where: { id: lessonData.contentId },
+    data: { processingStatus: "PROCESSING" },
+  });
+
+  await queue.add("transcode", {
+    videoContentId: lessonData.contentId,
+    fileKey: videoContent.s3Key,
+    lessonId,
+  });
+
+  return { message: "Transcode re-queued" };
+}

@@ -72,7 +72,7 @@ export function mapBackendChapter(ch: ChapterItem): Chapter {
       durationSeconds: l.durationSeconds,
       isPreview: l.isPreview,
       status: l.status,
-      processingStatus: l.processingStatus ?? ((l.content as Record<string, unknown>)?.processingStatus as string | undefined),
+      processingStatus: l.processingStatus ?? ((l.content as Record<string, unknown>)?.processingStatus as string | undefined) ?? undefined,
       content: mapLessonContent(l.contentType, l.content),
     })),
   };

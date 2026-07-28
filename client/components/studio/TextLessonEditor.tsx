@@ -145,6 +145,7 @@ export function TextLessonEditor({
   isLoading?: boolean;
 }) {
   const [title, setTitle] = useState(lessonTitle);
+  const [saving, setSaving] = useState(false);
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -159,10 +160,15 @@ export function TextLessonEditor({
   }, [editor, initial.body]);
 
   const handleSave = useCallback(async () => {
-    if (!editor) return;
-    await onSave({ body: editor.getHTML() }, title.trim() || lessonTitle);
-    onClose();
-  }, [editor, onSave, onClose, title, lessonTitle]);
+    if (!editor || saving) return;
+    setSaving(true);
+    try {
+      await onSave({ body: editor.getHTML() }, title.trim() || lessonTitle);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  }, [editor, onSave, onClose, title, lessonTitle, saving]);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -210,7 +216,18 @@ export function TextLessonEditor({
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          {!isLoading && <Button onClick={handleSave}>Save Lesson</Button>}
+          {!isLoading && (
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
+                <>
+                  <Spinner />
+                  Saving...
+                </>
+              ) : (
+                "Save Lesson"
+              )}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

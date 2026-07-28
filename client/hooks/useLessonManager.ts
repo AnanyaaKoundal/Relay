@@ -40,6 +40,7 @@ export function useLessonManager({
 
     const editorLessonRef = useRef(editorLesson);
 
+    const resolvedLessonIdRef = useRef<string | null>(null);
 
     const [editorLessonContent, setEditorLessonContent] = useState<LessonItem | null>(null);
 
@@ -107,12 +108,20 @@ export function useLessonManager({
 
                 if (type === "VIDEO") {
                     const v = data as VideoContent;
-                    await lessonApi.updateLesson(lessonId, {
+                    pendingLessonRef.current = {
+                        chapterId,
+                        id: lessonId,
+                        title: newTitle,
+                        contentType: type,
+                        durationSeconds: v.durationSeconds,
+                        content: data,
+                    };
+                    savedId = lessonId;
+                    lessonApi.updateLesson(lessonId, {
                         title: newTitle,
                         videoUrl: v.videoUrl,
                         durationSeconds: v.durationSeconds,
-                    });
-                    savedId = lessonId;
+                    }).catch(() => {});
                 } else {
                     const created = await lessonApi.createLesson(chapterId, {
                         title: newTitle,
@@ -122,17 +131,16 @@ export function useLessonManager({
                             : { questions: quizToBackendPayload(data as QuizContent) }),
                     });
                     savedId = created.id;
-                }
 
-                // Don't add to chapters yet — wait for modal close
-                pendingLessonRef.current = {
-                    chapterId,
-                    id: savedId,
-                    title: newTitle,
-                    contentType: type,
-                    durationSeconds: type === "VIDEO" ? (data as VideoContent).durationSeconds : null,
-                    content: data,
-                };
+                    pendingLessonRef.current = {
+                        chapterId,
+                        id: savedId,
+                        title: newTitle,
+                        contentType: type,
+                        durationSeconds: null,
+                        content: data,
+                    };
+                }
                 setEditorLesson({ chapterId, lessonId: savedId });
             } else {
                 // Existing lesson: update in chapters
@@ -149,6 +157,7 @@ export function useLessonManager({
                                             content: data,
                                             durationSeconds:
                                                 type === "VIDEO" ? (data as VideoContent).durationSeconds : l.durationSeconds,
+                                            processingStatus: type === "VIDEO" ? "PROCESSING" : l.processingStatus,
                                         }
                                         : l
                                 ),
@@ -260,6 +269,17 @@ export function useLessonManager({
         setTempLessonMeta(null);
         setEditorLessonContent(null);
 
+        /* ── Clean up orphan backend lesson if resolveLessonId ran but content was never saved ── */
+        const resolvedId = resolvedLessonIdRef.current;
+        if (resolvedId) {
+            const pending = pendingLessonRef.current;
+            const wasSaved = pending && pending.id === resolvedId;
+            if (!wasSaved) {
+                lessonApi.deleteLesson(resolvedId).catch(() => {});
+            }
+        }
+        resolvedLessonIdRef.current = null;
+
         const pending = pendingLessonRef.current;
         if (pending && pending.chapterId === chapterId) {
             setChapters((prev) =>
@@ -277,6 +297,7 @@ export function useLessonManager({
                                     durationSeconds: pending.durationSeconds,
                                     isPreview: false,
                                     status: "DRAFT" as const,
+                                    processingStatus: pending.contentType === "VIDEO" ? "PROCESSING" : undefined,
                                     content: pending.content,
                                 },
                             ],
@@ -324,6 +345,7 @@ export function useLessonManager({
                 videoUrl: "",
                 durationSeconds: undefined,
             });
+            resolvedLessonIdRef.current = created.id;
             setEditorLesson({ chapterId, lessonId: created.id });
             return created.id;
         },

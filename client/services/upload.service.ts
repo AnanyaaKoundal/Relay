@@ -1,5 +1,6 @@
 import { API_URL } from "@/lib/config";
 
+const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   let res: Response;
   try {
@@ -53,34 +54,46 @@ export async function completeUpload(
 
 /* ─── XHR Upload with Progress (via backend proxy to avoid CORS) ─── */
 
-export function uploadFileWithProgress(
+export async function uploadFileWithProgress(
   proxyBaseUrl: string,
   uploadUrl: string,
   file: File,
   onProgress: (percent: number) => void,
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const proxyUrl = `${proxyBaseUrl}/uploads/proxy?url=${encodeURIComponent(uploadUrl)}`;
-    const xhr = new XMLHttpRequest();
-    xhr.open("PUT", proxyUrl);
-    xhr.setRequestHeader("Content-Type", file.type);
-    xhr.withCredentials = true;
+  let lastError;
+  const attempts = 3;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return new Promise((resolve, reject) => {
+        const proxyUrl = `${proxyBaseUrl}/uploads/proxy?url=${encodeURIComponent(uploadUrl)}`;
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", proxyUrl);
+        xhr.setRequestHeader("Content-Type", file.type);
+        xhr.withCredentials = true;
 
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) {
-        onProgress(Math.round((e.loaded / e.total) * 100));
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            onProgress(Math.round((e.loaded / e.total) * 100));
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(new Error(`Upload failed with status ${xhr.status}`));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error("Upload failed — network error"));
+        xhr.send(file);
+      });
+    } catch (err) {
+      lastError = err;
+      if (i < attempts - 1) {
+        await delay(Math.pow(2, i) * 1000);
       }
-    };
-
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve();
-      } else {
-        reject(new Error(`Upload failed with status ${xhr.status}`));
-      }
-    };
-
-    xhr.onerror = () => reject(new Error("Upload failed — network error"));
-    xhr.send(file);
-  });
+    }
+  }
+  throw lastError;
 }

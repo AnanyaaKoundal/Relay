@@ -205,8 +205,13 @@ export async function updateCourse(
         where: { id: pl.contentId },
         select: { processingStatus: true },
       });
-      if (vc && vc.processingStatus === "PROCESSING") {
-        throw new AppError("Cannot publish while videos are still processing", 400);
+      if (vc) {
+        if (vc.processingStatus === "PROCESSING") {
+          throw new AppError("Cannot publish while videos are still processing", 400);
+        }
+        if (vc.processingStatus === "FAILED") {
+          throw new AppError("Cannot publish while a video transcoding has failed. Retry transcoding first.", 400);
+        }
       }
     }
 
@@ -277,6 +282,21 @@ export async function getInstructorWorkspace(instructorId: string, courseId: str
 
   if (!course) return null;
 
+  /* ── Batch-fetch processingStatus for video lessons ── */
+  const videoContentIds = course.chapters
+    .flatMap((ch) => ch.lessons)
+    .filter((l) => l.contentType === "VIDEO" && l.contentId)
+    .map((l) => l.contentId);
+
+  const videoContents = videoContentIds.length > 0
+    ? await prisma.videoContent.findMany({
+        where: { id: { in: videoContentIds } },
+        select: { id: true, processingStatus: true },
+      })
+    : [];
+
+  const processingStatusMap = new Map(videoContents.map((vc) => [vc.id, vc.processingStatus]));
+
   return {
     id: course.id,
     title: course.title,
@@ -298,6 +318,7 @@ export async function getInstructorWorkspace(instructorId: string, courseId: str
         ...l,
         chapterId: ch.id,
         content: null,
+        processingStatus: l.contentType === "VIDEO" ? (processingStatusMap.get(l.contentId) ?? null) : null,
       })),
     })),
   };

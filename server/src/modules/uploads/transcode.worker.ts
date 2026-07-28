@@ -1,4 +1,4 @@
-import { Worker } from "bullmq";
+import { Worker, Job } from "bullmq";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { readFile, unlink, mkdir, writeFile } from "fs/promises";
@@ -8,12 +8,14 @@ import { randomUUID } from "crypto";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const ffmpegPath: string = require("ffmpeg-static");
+import type { TranscodeJobData } from "./transcode.queue.js";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import s3, { S3_BUCKET } from "../../lib/s3.js";
 import { prisma } from "../../lib/prisma.js";
 import { logger } from "../../utils/logger.js";
 
 const execFileAsync = promisify(execFile);
+const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 const QUALITIES = [
   { label: "1080p", scale: "1920:1080", maxrate: "5M", bufsize: "10M" },
@@ -23,10 +25,24 @@ const QUALITIES = [
 
 async function downloadFile(key: string, dest: string): Promise<void> {
   const url = `http://localhost:${process.env.PORT ?? 5000}/s3/${key}`;
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Download failed: ${response.status} ${response.statusText}`);
-  const body = new Uint8Array(await response.arrayBuffer());
-  await writeFile(dest, body);
+  const maxAttempts = 3;
+  let lastError: Error | null = null;
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+      const body = new Uint8Array(await response.arrayBuffer());
+      await writeFile(dest, body);
+      return;
+    } catch (err) {
+      lastError = err as Error;
+      if (i < maxAttempts - 1) {
+        logger.warn(`Download attempt ${i + 1} failed, retrying in ${Math.pow(2, i)}s`);
+        await delay(Math.pow(2, i) * 1000);
+      }
+    }
+  }
+  throw lastError;
 }
 
 async function uploadDir(localDir: string, s3Prefix: string): Promise<void> {
@@ -105,7 +121,7 @@ function buildMasterPlaylist(qualities: { label: string; dir: string }[]): strin
   return master;
 }
 
-async function transcode(data: { videoContentId: string; fileKey: string; lessonId: string }) {
+async function transcode(job: Job<TranscodeJobData>) {
   const tmpId = randomUUID();
   const workDir = join(tmpdir(), `relay-transcode-${tmpId}`);
   const inputPath = join(workDir, "input.mp4");
@@ -115,8 +131,8 @@ async function transcode(data: { videoContentId: string; fileKey: string; lesson
     await mkdir(workDir, { recursive: true });
     await mkdir(hlsDir, { recursive: true });
 
-    logger.info(`Downloading ${data.fileKey}`);
-    await downloadFile(data.fileKey, inputPath);
+    logger.info(`Downloading ${job.data.fileKey}`);
+    await downloadFile(job.data.fileKey, inputPath);
 
     // Transcode each quality
     const qualityDirs: { label: string; dir: string }[] = [];
@@ -133,35 +149,37 @@ async function transcode(data: { videoContentId: string; fileKey: string; lesson
     await writeFile(join(hlsDir, "master.m3u8"), master);
 
     // Upload to S3
-    const s3Prefix = data.fileKey.replace(/\/raw\/[^/]+$/, "/hls/");
+    const s3Prefix = job.data.fileKey.replace(/\/raw\/[^/]+$/, "/hls/");
     logger.info(`Uploading HLS output to ${s3Prefix}`);
     await uploadDir(hlsDir, s3Prefix);
 
     // Update DB
     const hlsUrl = `/s3/${s3Prefix}master.m3u8`;
     const existing = await prisma.videoContent.findUnique({
-      where: { id: data.videoContentId },
+      where: { id: job.data.videoContentId },
       select: { id: true },
     });
     if (existing) {
       await prisma.videoContent.update({
-        where: { id: data.videoContentId },
+        where: { id: job.data.videoContentId },
         data: { hlsUrl, processingStatus: "READY" },
       });
     }
 
-    logger.info(`Transcoding complete for ${data.videoContentId}`);
+    logger.info(`Transcoding complete for ${job.data.videoContentId}`);
   } catch (err) {
-    logger.error(`Transcoding failed for ${data.videoContentId}`, { error: (err as Error).message });
+    logger.error(`Transcoding failed for ${job.data.videoContentId}`, { error: (err as Error).message });
     const existing = await prisma.videoContent.findUnique({
-      where: { id: data.videoContentId },
+      where: { id: job.data.videoContentId },
       select: { id: true },
     });
     if (existing) {
-      await prisma.videoContent.update({
-        where: { id: data.videoContentId },
-        data: { processingStatus: "FAILED" },
-      });
+      if (job.attemptsMade >= (job.opts.attempts ?? 3) - 1) {
+        await prisma.videoContent.update({
+          where: { id: job.data.videoContentId },
+          data: { processingStatus: "FAILED" },
+        });
+      }
     }
     throw err;
   } finally {
@@ -174,13 +192,14 @@ async function transcode(data: { videoContentId: string; fileKey: string; lesson
 export function startTranscodeWorker() {
   const worker = new Worker(
     "transcode",
-    async (job) => {
+    async (job: Job<TranscodeJobData>) => {
       logger.info(`Processing transcode job ${job.id}`);
-      await transcode(job.data);
+      await transcode(job);
     },
     {
       connection: { url: process.env.REDIS_URL ?? "redis://localhost:6379" },
       concurrency: 1,
+      lockDuration: 60_000,
     },
   );
 
@@ -190,6 +209,10 @@ export function startTranscodeWorker() {
 
   worker.on("completed", (job) => {
     logger.info(`Job ${job.id} completed`);
+  });
+
+  worker.on("stalled", (jobId) => {
+    logger.warn(`Job ${jobId} stalled — worker may have crashed`);
   });
 
   logger.info("Transcode worker started");

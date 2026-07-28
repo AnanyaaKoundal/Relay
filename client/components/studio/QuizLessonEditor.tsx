@@ -103,9 +103,17 @@ export function QuizLessonEditor({
     );
   }
 
+  const [saving, setSaving] = useState(false);
+
   async function handleSave() {
-    await onSave({ questions }, title.trim() || lessonTitle);
-    onClose();
+    if (saving) return;
+    setSaving(true);
+    try {
+      await onSave({ questions }, title.trim() || lessonTitle);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -228,7 +236,18 @@ export function QuizLessonEditor({
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          {!isLoading && <Button onClick={handleSave}>Save Quiz</Button>}
+          {!isLoading && (
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
+                <>
+                  <Spinner />
+                  Saving...
+                </>
+              ) : (
+                "Save Quiz"
+              )}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

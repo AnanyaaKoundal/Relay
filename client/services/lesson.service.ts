@@ -83,3 +83,9 @@ export async function unpublishLessons(lessonIds: string[]): Promise<{ unpublish
 export async function getProcessingStatus(courseId: string): Promise<{ lessonId: string; processingStatus: string }[]> {
   return request(`/lessons/processing-status/${courseId}`);
 }
+
+export async function retryTranscode(lessonId: string): Promise<{ message: string }> {
+  return request<{ message: string }>(`/uploads/retry-transcode/${lessonId}`, {
+    method: "POST",
+  });
+}

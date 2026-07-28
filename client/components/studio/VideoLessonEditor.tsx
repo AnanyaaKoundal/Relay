@@ -10,10 +10,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Video, Clock } from "lucide-react";
+import { Video, Clock, AlertCircle } from "lucide-react";
 import { Spinner } from "@/components/shared/spinner";
 import { VideoUploader, useVideoDuration } from "@/components/studio/video-uploader";
 import { presignUpload, completeUpload, uploadFileWithProgress } from "@/services/upload.service";
+import { retryTranscode } from "@/services/lesson.service";
 import { resolveUrl } from "@/lib/utils";
 import { API_URL } from "@/lib/config";
 import type { VideoContent } from "@/types/lesson.types";
@@ -28,18 +29,22 @@ export function VideoLessonEditor({
   open,
   onClose,
   onSave,
+  onRetry,
   initial,
   lessonTitle,
   lessonId,
+  processingStatus,
   isLoading,
   onResolveLessonId,
 }: {
   open: boolean;
   onClose: () => void;
   onSave: (data: VideoContent, title: string) => void | Promise<void>;
+  onRetry?: (lessonId: string) => void | Promise<void>;
   initial: VideoContent;
   lessonTitle: string;
   lessonId: string;
+  processingStatus?: string;
   isLoading?: boolean;
   onResolveLessonId?: () => Promise<string>;
 }) {
@@ -48,11 +53,15 @@ export function VideoLessonEditor({
   const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "done">("idle");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const autoDuration = useVideoDuration(file);
+
+  const isFailed = processingStatus === "FAILED";
 
   const hasExistingVideo = !!initial.videoUrl;
   const canSave = hasExistingVideo || (file && uploadStatus === "idle");
   const isUploading = uploadStatus === "uploading";
+  const showLoading = isLoading && uploadStatus === "idle";
 
   function handleFileSelect(f: File) {
     setFile(f);
@@ -73,15 +82,15 @@ export function VideoLessonEditor({
       const realId = onResolveLessonId ? await onResolveLessonId() : lessonId;
       const { uploadUrl, fileKey } = await presignUpload(file.name, file.type, realId);
       await uploadFileWithProgress(API_URL, uploadUrl, file, setUploadProgress);
-      await completeUpload(realId, fileKey);
-
       setUploadStatus("done");
-      await onSave(
+      onSave(
         { videoUrl: `${API_URL}/s3/${fileKey}`, durationSeconds: autoDuration, resources: [] },
         title.trim() || lessonTitle,
       );
       onClose();
-    } catch {
+      completeUpload(realId, fileKey).catch(() => {});
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed")
       setUploadStatus("idle");
     } finally {
       setSaving(false);
@@ -96,82 +105,126 @@ export function VideoLessonEditor({
     onClose();
   }
 
+  async function handleRetry() {
+    setSaving(true);
+    try {
+      if (onRetry) {
+        await onRetry(lessonId);
+      } else {
+        await retryTranscode(lessonId);
+      }
+      onClose();
+    } catch {
+      // ignore
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Video className="size-4 text-blue-500" />
-            {isLoading ? "Loading..." : hasExistingVideo ? "Edit Video Lesson" : "New Video Lesson"}
+            {showLoading ? "Loading..." : hasExistingVideo ? "Edit Video Lesson" : "New Video Lesson"}
           </DialogTitle>
         </DialogHeader>
 
-        {isLoading ? (
+        {showLoading ? (
           <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground text-sm">
             <Spinner />
             Loading content...
           </div>
         ) : (
-        <div className="space-y-5 py-2">
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Lesson Title</label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="mt-1.5"
-              placeholder="e.g. Introduction to React Hooks"
-            />
-          </div>
-
-          {hasExistingVideo ? (
+          <div className="space-y-5 py-2">
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Video</label>
-              <div className="mt-1.5 rounded-xl overflow-hidden bg-black/5">
-                <video src={resolveUrl(initial.videoUrl) ?? ""} controls className="w-full max-h-48" />
+              <label className="text-xs font-medium text-muted-foreground">Lesson Title</label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="mt-1.5"
+                placeholder="e.g. Introduction to React Hooks"
+              />
+            </div>
+            {isFailed && !uploadError && (
+              <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                <div>
+                  <p className="font-medium">Transcoding failed</p>
+                  <p className="mt-0.5 text-red-600">The video could not be processed. Click "Retry Transcoding" to try again.</p>
+                </div>
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Video cannot be replaced. Delete this lesson and create a new one to upload a different video.
-              </p>
-            </div>
-          ) : (
-            <VideoUploader
-              file={file}
-              status={uploadStatus}
-              progress={uploadProgress}
-              onFileSelect={handleFileSelect}
-            />
-          )}
+            )}
+            {uploadError && (
+              <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                <div>
+                  <p className="font-medium">Upload failed</p>
+                  <p className="mt-0.5 text-red-600">{uploadError}</p>
+                </div>
+              </div>
+            )}
+            {hasExistingVideo ? (
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Video</label>
+                <div className="mt-1.5 rounded-xl overflow-hidden bg-black/5">
+                  <video src={resolveUrl(initial.videoUrl) ?? ""} controls className="w-full max-h-48" />
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Video cannot be replaced. Delete this lesson and create a new one to upload a different video.
+                </p>
+              </div>
+            ) : (
+              <VideoUploader
+                file={file}
+                status={uploadStatus}
+                progress={uploadProgress}
+                onFileSelect={handleFileSelect}
+              />
+            )}
 
-          {!hasExistingVideo && autoDuration != null && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Clock className="size-3" />
-              Duration: {formatDuration(autoDuration)}
-            </div>
-          )}
-          {hasExistingVideo && initial.durationSeconds != null && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Clock className="size-3" />
-              Duration: {formatDuration(initial.durationSeconds)}
-            </div>
-          )}
-        </div>
+            {!hasExistingVideo && autoDuration != null && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Clock className="size-3" />
+                Duration: {formatDuration(autoDuration)}
+              </div>
+            )}
+            {hasExistingVideo && initial.durationSeconds != null && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Clock className="size-3" />
+                Duration: {formatDuration(initial.durationSeconds)}
+              </div>
+            )}
+          </div>
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isUploading}>
+          <Button variant="outline" onClick={onClose} disabled={isUploading || saving}>
             Cancel
           </Button>
-          {!isLoading && (hasExistingVideo ? (
+          {!showLoading && (isFailed ? (
+            <Button variant="destructive" onClick={handleRetry} disabled={saving}>
+              {saving ? (
+                <>
+                  <Spinner />
+                  Retrying...
+                </>
+              ) : (
+                "Retry Transcoding"
+              )}
+            </Button>
+          ) : hasExistingVideo ? (
             <Button onClick={handleSave}>Save</Button>
           ) : (
             <Button onClick={handleUploadAndSave} disabled={!canSave || isUploading || saving}>
               {isUploading ? (
                 <>
-<Spinner />
-                   Uploading...
+                  <Spinner />
+                  Uploading...
                 </>
               ) : (
-                "Upload & Save"
+                uploadError ? "Retry Upload" : "Upload & Save"
               )}
             </Button>
           ))}

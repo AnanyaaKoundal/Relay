@@ -23,10 +23,10 @@ try {
   logger.warn("S3 not available — video uploads will fail", { error: (err as Error).message });
 }
 
-startTranscodeWorker();
-
 await seedAdmin();
 
 app.listen(port, () => {
   logger.info(`Server running on http://localhost:${port}`);
 });
+
+startTranscodeWorker();

@@ -303,9 +303,7 @@ export async function reorderLessons(
 /* ─── Publish / Unpublish ─── */
 
 export async function publishLessons(instructorId: string, lessonIds: string[]) {
-  const updated: string[] = [];
-  const chapterIdsToPublish = new Set<string>();
-
+  /* ── Validate all lessons first ── */
   for (const lessonId of lessonIds) {
     const lesson = await assertLessonOwnership(instructorId, lessonId);
     if (lesson.status !== "DRAFT") continue;
@@ -315,10 +313,24 @@ export async function publishLessons(instructorId: string, lessonIds: string[]) 
         where: { id: lesson.contentId },
         select: { processingStatus: true },
       });
-      if (vc && vc.processingStatus === "PROCESSING") {
-        throw new AppError("Cannot publish a lesson while its video is still processing", 400);
+      if (vc) {
+        if (vc.processingStatus === "PROCESSING") {
+          throw new AppError("Cannot publish a lesson while its video is still processing", 400);
+        }
+        if (vc.processingStatus === "FAILED") {
+          throw new AppError("Cannot publish a lesson — its video transcoding failed. Retry transcoding first.", 400);
+        }
       }
     }
+  }
+
+  /* ── Publish all validated lessons ── */
+  const updated: string[] = [];
+  const chapterIdsToPublish = new Set<string>();
+
+  for (const lessonId of lessonIds) {
+    const lesson = await assertLessonOwnership(instructorId, lessonId);
+    if (lesson.status !== "DRAFT") continue;
 
     chapterIdsToPublish.add(lesson.chapterId);
 
@@ -385,7 +397,7 @@ export async function getLessonProcessingStatus(courseId: string) {
   const videoContents = await prisma.videoContent.findMany({
     where: {
       id: { in: contentIds },
-      processingStatus: { in: ["PENDING", "PROCESSING"] },
+      processingStatus: { in: ["PENDING", "PROCESSING", "FAILED"] },
     },
     select: { id: true, processingStatus: true },
   });

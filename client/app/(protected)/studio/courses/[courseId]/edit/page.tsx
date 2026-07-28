@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import * as courseApi from "@/services/course.service";
+import * as lessonApi from "@/services/lesson.service";
 import { useConfirm } from "@/components/shared/confirm-modal";
 import { useProcessingPolling } from "@/hooks/useProcessingPolling";
 import { useCourseActions } from "@/hooks/useCourseActions";
@@ -186,6 +187,19 @@ export default function CourseBuilderWorkspace() {
   })
 
 
+  const handleRetryTranscode = useCallback(async (lessonId: string) => {
+    const el = editorLessonRef.current;
+    if (!el) return;
+    setChapters((prev) =>
+      prev.map((ch) =>
+        ch.id === el.chapterId
+          ? { ...ch, lessons: ch.lessons.map((l) => (l.id === lessonId ? { ...l, processingStatus: "PROCESSING" } : l)) }
+          : ch
+      )
+    );
+    await lessonApi.retryTranscode(lessonId);
+  }, []);
+
   const totalLessons = chapters.reduce((acc, c) => acc + c.lessons.length, 0);
   const editingLesson = findEditingLesson();
   const isContentLoading = editorLesson && !editorLesson.lessonId.startsWith("temp_") && editingLesson && !editingLesson.content;
@@ -276,6 +290,8 @@ export default function CourseBuilderWorkspace() {
           initial={(editingLesson.content as VideoContent) ?? { videoUrl: "", durationSeconds: null, resources: [] }}
           lessonTitle={editingLesson.title}
           lessonId={editingLesson.id}
+          processingStatus={editingLesson.processingStatus}
+          onRetry={handleRetryTranscode}
           isLoading={!!isContentLoading}
           onResolveLessonId={
             editingLesson.id.startsWith("temp_")
