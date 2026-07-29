@@ -23,11 +23,13 @@ import {
   type Chapter,
   mapBackendChapter
 } from "@/components/studio/course-builder";
+import Image from "next/image";
+import { BookOpen, FileText, Users, FileEdit, DollarSign } from "lucide-react";
 import { Spinner } from "@/components/shared/spinner";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { useChapterManager } from "@/hooks/useChapterManager";
 import { useLessonManager } from "@/hooks/useLessonManager";
 import { ActionBar } from "@/components/studio/course-builder/action-bar";
-import { CourseDetailsForm } from "@/components/studio/course-builder/course-details-form";
 import { ChapterSection } from "@/components/studio/course-builder/chapters-section";
 
 /* ─── Main Builder ─── */
@@ -59,6 +61,8 @@ export default function CourseBuilderWorkspace() {
     type: LessonType;
     title: string;
   } | null>(null);
+
+
 
 
 
@@ -225,9 +229,10 @@ export default function CourseBuilderWorkspace() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       {/* Top Action Bar */}
       <ActionBar
+        courseId={params.courseId!}
         courseStatus={course.status}
         totalDraftCount={totalDraftCount}
         publishing={publishing}
@@ -236,21 +241,62 @@ export default function CourseBuilderWorkspace() {
         onPublishCourse={handlePublishCourse}
       />
 
-      {/* Course Details */}
-      <CourseDetailsForm
-        price={course.price}
-        difficulty={course.difficulty}
-        title={title}
-        setTitle={setTitle}
-        description={description}
-        setDescription={setDescription}
-        chapters={chapters}
-        totalLessons={totalLessons}
-        totalDraftCount={totalDraftCount}
-        saved={saved}
-        saving={saving}
-        onSave={handleSave}
-      />
+      {/* Course Banner */}
+      <div className="rounded-xl border bg-card flex overflow-hidden h-60">
+        <div className="relative w-1/2 shrink-0 bg-muted">
+          <Image
+            src={course.thumbnailUrl || "/thumbnail.avif"}
+            alt={course.title}
+            fill
+            className="object-cover"
+          />
+        </div>
+        <div className="flex flex-1 flex-col p-4 min-w-0">
+          <h1 className="text-2xl font-bold leading-tight truncate mb-0.5">{course.title}</h1>
+          <div className="mb-1.5 flex items-center gap-2">
+            <StatusBadge status={course.status} />
+            <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+              {Number(course.price) === 0 ? "Free" : `$${Number(course.price).toFixed(2)}`}
+            </span>
+          </div>
+          {course.description && (
+            <p className="mt-0.5 text-xs text-foreground leading-relaxed line-clamp-2">
+              <span className="text-muted-foreground">Description: </span>
+              {course.description}
+            </p>
+          )}
+          <Link
+            href={`/studio/courses/${params.courseId}/settings`}
+            className="mt-1 text-xs text-primary hover:underline w-fit"
+          >
+            Edit course details →
+          </Link>
+          <div className="mt-6">
+            <div className="flex items-center justify-between px-4">
+              <div className="flex items-center gap-1.5">
+                <BookOpen className="size-7 text-muted-foreground" />
+                <span className="text-lg font-semibold">{chapters.length}</span>
+                <span className="text-[15px] text-muted-foreground">chapters</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <FileText className="size-7 text-muted-foreground" />
+                <span className="text-lg font-semibold">{totalLessons}</span>
+                <span className="text-[15px] text-muted-foreground">lessons</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <FileEdit className="size-7 text-muted-foreground" />
+                <span className="text-lg font-semibold">{totalDraftCount}</span>
+                <span className="text-[15px] text-muted-foreground">drafts</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Users className="size-7 text-muted-foreground" />
+                <span className="text-lg font-semibold">{(course._count?.enrollments ?? 0).toLocaleString()}</span>
+                <span className="text-[15px] text-muted-foreground">enrolled</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Batch Publish Toolbar */}
       <PublishToolbar

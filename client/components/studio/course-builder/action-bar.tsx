@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Send, Undo2 } from "lucide-react";
+import { ArrowLeft, Send, Undo2, Settings } from "lucide-react";
 import { Spinner } from "@/components/shared/spinner";
 import { StatusBadge } from "@/components/shared/status-badge";
 
 export function ActionBar({
+    courseId,
     courseStatus,
     totalDraftCount,
     publishing,
@@ -13,6 +14,7 @@ export function ActionBar({
     onDiscardDraft,
     onPublishCourse,
 }: {
+    courseId: string;
     courseStatus: string;
     totalDraftCount: number;
     publishing: boolean;
@@ -20,7 +22,6 @@ export function ActionBar({
     onDiscardDraft: () => void;
     onPublishCourse: () => void;
 }) {
-
 
     return (
         <div className="flex items-center justify-between">
@@ -31,7 +32,6 @@ export function ActionBar({
                 >
                     <ArrowLeft className="size-4" />
                 </Link>
-                <StatusBadge status={courseStatus} />
             </div>
 
             <div className="flex items-center gap-2">
@@ -68,6 +68,13 @@ export function ActionBar({
                         Publish
                     </button>
                 )}
+                <Link
+                    href={`/studio/courses/${courseId}/settings`}
+                    className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    title="Course Settings"
+                >
+                    <Settings className="size-4" />
+                </Link>
             </div>
         </div>
     )

@@ -8,17 +8,27 @@ export default function StudioNewCoursePage() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isPaid, setIsPaid] = useState(false);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
     const form = new FormData(e.currentTarget);
+
+    if (isPaid) {
+      const price = form.get("price") as string;
+      if (!price || Number(price) <= 0) {
+        setError("Please enter a price for the paid course");
+        return;
+      }
+    }
+
     const data = {
       title: (form.get("title") as string).trim(),
       description: (form.get("description") as string).trim(),
       category: (form.get("category") as string).trim() || undefined,
       difficulty: (form.get("difficulty") as string) || undefined,
-      price: form.get("price") ? Number(form.get("price")) : undefined,
+      price: isPaid ? Number(form.get("price")) : 0,
     };
 
     if (!data.title || !data.description) {
@@ -64,15 +74,28 @@ export default function StudioNewCoursePage() {
             </select>
           </div>
           <div>
-            <label htmlFor="price" className="text-sm font-medium">Price ($)</label>
-            <input id="price" name="price" type="number" min="0" step="0.01" placeholder="0.00" className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" />
-          </div>
-          <div>
             <label className="text-sm font-medium">Free or Paid</label>
-            <select name="price_type" className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" defaultValue="free" onChange={(e) => { const el = document.getElementById("price") as HTMLInputElement | null; if (el) el.value = e.target.value === "free" ? "0" : ""; }}>
+            <select
+              className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+              value={isPaid ? "paid" : "free"}
+              onChange={(e) => setIsPaid(e.target.value === "paid")}
+            >
               <option value="free">Free</option>
               <option value="paid">Paid</option>
             </select>
+          </div>
+          <div>
+            <label htmlFor="price" className="text-sm font-medium">Price ($)</label>
+            <input
+              id="price"
+              name="price"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="0.00"
+              disabled={!isPaid}
+              className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+            />
           </div>
           <div>
             <label htmlFor="topics" className="text-sm font-medium">Topics / Skills</label>
