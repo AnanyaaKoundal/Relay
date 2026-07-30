@@ -9,6 +9,7 @@ import coursesRoutes from "./modules/courses/courses.routes.js";
 import chaptersRoutes from "./modules/chapters/chapters.routes.js";
 import lessonsRoutes from "./modules/lessons/lessons.routes.js";
 import enrollmentsRoutes from "./modules/enrollments/enrollments.routes.js";
+import paymentsRoutes from "./modules/payments/payments.routes.js";
 import uploadsRoutes from "./modules/uploads/uploads.routes.js";
 import { requestLogger } from "./middleware/request-logger.js";
 import { errorHandler } from "./middleware/error-handler.js";
@@ -51,6 +52,7 @@ app.use("/courses", coursesRoutes);              // public browse + instructor C
 app.use("/chapters", chaptersRoutes);            // chapter management (instructor)
 app.use("/lessons", lessonsRoutes);              // lesson management (instructor)
 app.use("/enrollments", enrollmentsRoutes);      // enrollment + lesson content + progress
+app.use("/payments", paymentsRoutes);            // purchase + payment history
 app.use("/uploads", uploadsRoutes);              // presigned URLs for file uploads
 
 app.use(errorHandler);

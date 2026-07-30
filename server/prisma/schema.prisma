@@ -46,6 +46,7 @@ enum PaymentStatus {
 }
 
 enum PaymentGateway {
+  MOCK
   STRIPE
   RAZORPAY
 }
@@ -91,6 +92,7 @@ model Course {
   instructor    User         @relation(fields: [instructorId], references: [id])
   chapters      Chapter[]
   enrollments   Enrollment[]
+  coupons       Coupon[]
 
   @@index([status, createdAt])
   @@index([instructorId, createdAt])
@@ -184,11 +186,16 @@ model Enrollment {
 model Payment {
   id                   String         @id @default(uuid())
   userId               String         @map("user_id")
-  amount               Decimal
-  currency             String         @default("USD")
+  subtotal             Decimal
+  discountAmount       Decimal        @default(0) @map("discount_amount")
+  taxAmount            Decimal        @map("tax_amount")
+  totalAmount          Decimal        @map("total_amount")
+  currency             String         @default("INR")
+  billingCountry       String         @map("billing_country")
   gateway              PaymentGateway
   gatewayTransactionId String         @map("gateway_transaction_id")
   status               PaymentStatus  @default(PENDING)
+  couponId             String?        @map("coupon_id")
   invoiceUrl           String?        @map("invoice_url")
   createdAt            DateTime       @default(now()) @map("created_at")
 
@@ -261,4 +268,25 @@ model LessonProgress {
   @@unique([userId, lessonId])
   @@index(enrollmentId)
   @@map("lesson_progress")
+}
+
+model Coupon {
+  id            String    @id @default(uuid())
+  courseId      String    @map("course_id")
+  code          String
+  discountType  String    // "PERCENTAGE" or "FIXED"
+  discountValue Decimal
+  maxUses       Int       // total redemptions allowed, 0 = unlimited
+  usedCount     Int       @default(0)
+  isActive      Boolean   @default(true)
+  isPublic      Boolean   @default(false) // auto-applied, shows on course page
+  label         String?   // "Diwali offer", "Special offer" — shown on course page
+  startsAt      DateTime? @map("starts_at")
+  expiresAt     DateTime? @map("expires_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  course Course @relation(fields: [courseId], references: [id])
+
+  @@unique([courseId, code])
+  @@map("coupons")
 }

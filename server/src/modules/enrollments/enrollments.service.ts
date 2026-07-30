@@ -6,10 +6,17 @@ import { AppError } from "../../lib/app-error.js";
 export async function enrollInCourse(userId: string, courseId: string) {
   const course = await prisma.course.findFirst({
     where: { id: courseId, status: "PUBLISHED" },
-    select: { id: true },
+    select: { id: true, price: true },
   });
   if (!course) {
     throw new AppError("Course not found or not published", 404);
+  }
+
+  if (Number(course.price) > 0) {
+    throw new AppError(
+      "This is a paid course. Use POST /payments/purchase to enroll.",
+      400,
+    );
   }
 
   const existing = await prisma.enrollment.findUnique({

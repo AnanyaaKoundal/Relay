@@ -49,7 +49,7 @@ export function LearnerNavbar() {
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-lg">
-      <div className="mx-auto flex h-14 max-w-7xl items-center gap-4 px-4 sm:px-6">
+      <div className="mx-auto flex h-14 max-w-8xl items-center gap-4 px-4 sm:px-6">
         {/* Logo */}
         <Link href="/home" className="shrink-0 text-lg font-semibold tracking-tight">
           Relay

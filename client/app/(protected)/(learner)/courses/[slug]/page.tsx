@@ -14,7 +14,7 @@ import {
 } from "@/services/enrollment.service";
 import type { EnrollmentDetail } from "@/types/enrollment.types";
 import { CurriculumAccordion } from "@/components/learner/course-player/curriculum-accordion";
-import { Users, BookOpen, Clock, CheckCircle2 } from "lucide-react";
+import { Users, BookOpen, Clock, CheckCircle2, ArrowRight } from "lucide-react";
 import { Spinner } from "@/components/shared/spinner";
 
 export default function CourseDetailPage() {
@@ -146,7 +146,7 @@ export default function CourseDetailPage() {
         <div className="lg:sticky lg:top-20 lg:self-start">
           <div className="rounded-xl border bg-card p-6 space-y-4">
             <div className="text-2xl font-bold">
-              {Number(course.price) === 0 ? "Free" : `$${course.price}`}
+              {Number(course.price) === 0 ? "Free" : `₹${course.price}`}
             </div>
 
             {enrollment ? (
@@ -156,6 +156,14 @@ export default function CourseDetailPage() {
               >
                 <CheckCircle2 className="size-4 mr-2" />
                 {enrollment.progressPercent > 0 ? "Continue Learning" : "Start Course"}
+              </Link>
+            ) : Number(course.price) > 0 ? (
+              <Link
+                href={`/courses/${slug}/checkout`}
+                className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                Purchase — ₹{course.price}
+                <ArrowRight className="size-4" />
               </Link>
             ) : (
               <button
