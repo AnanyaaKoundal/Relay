@@ -48,13 +48,46 @@ export async function browseCourses(params: {
           select: { id: true, name: true },
         },
         _count: { select: { chapters: true, enrollments: true } },
+        coupons: {
+          where: { isPublic: true, isActive: true },
+          select: {
+            discountType: true,
+            discountValue: true,
+            label: true,
+            startsAt: true,
+            expiresAt: true,
+            maxUses: true,
+            usedCount: true,
+          },
+        },
       },
     }),
     prisma.course.count({ where }),
   ]);
 
+  const now = new Date();
+  const withPromo = courses.map(({ coupons, ...course }) => {
+    const valid = coupons.find((c) => {
+      if (c.startsAt && now < c.startsAt) return false;
+      if (c.maxUses > 0 && c.usedCount >= c.maxUses) return false;
+      if (c.expiresAt && now > c.expiresAt) return false;
+      return true;
+    });
+
+    return {
+      ...course,
+      promo: valid
+        ? {
+            discountType: valid.discountType,
+            discountValue: Number(valid.discountValue),
+            label: valid.label,
+          }
+        : null,
+    };
+  });
+
   return {
-    courses,
+    courses: withPromo,
     pagination: {
       page: params.page,
       limit: params.limit,
@@ -99,6 +132,7 @@ export async function getPublicCourse(slug: string) {
           discountType: true,
           discountValue: true,
           label: true,
+          startsAt: true,
           expiresAt: true,
           maxUses: true,
           usedCount: true,
@@ -115,6 +149,7 @@ export async function getPublicCourse(slug: string) {
   const now = new Date();
   const validCoupons = course.coupons
     .filter((c) => {
+      if (c.startsAt && now < c.startsAt) return false;
       if (c.maxUses > 0 && c.usedCount >= c.maxUses) return false;
       if (c.expiresAt && now > c.expiresAt) return false;
       return true;
@@ -125,6 +160,7 @@ export async function getPublicCourse(slug: string) {
       discountType: c.discountType,
       discountValue: Number(c.discountValue),
       label: c.label,
+      startsAt: c.startsAt,
       expiresAt: c.expiresAt,
     }));
 

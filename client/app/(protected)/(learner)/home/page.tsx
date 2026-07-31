@@ -160,6 +160,7 @@ export default function HomePage() {
                   instructor={course.instructor?.name}
                   thumbnail={course.thumbnailUrl}
                   price={Number(course.price)}
+                  promo={course.promo}
                   showContinue={false}
                 />
               </div>

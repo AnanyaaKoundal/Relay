@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Play } from "lucide-react";
+import type { Promo } from "@/types/course.types";
 
 type CourseCardProps = {
   id: string;
@@ -15,6 +16,7 @@ type CourseCardProps = {
   rating?: number;
   students?: number;
   price?: number;
+  promo?: Promo | null;
   showContinue?: boolean;
   learnHref?: string;
 };
@@ -30,12 +32,21 @@ export function CourseCard({
   rating,
   students,
   price,
+  promo,
   showContinue = true,
   learnHref,
 }: CourseCardProps) {
   const href = learnHref ?? (slug ? `/learn/${slug}` : `/courses/${id}`);
   const isEnrolled = progress !== undefined;
   const hasProgress = isEnrolled && progress > 0;
+
+  const discounted =
+    promo && price !== undefined
+      ? promo.discountType === "PERCENTAGE"
+        ? Math.round(price * (1 - promo.discountValue / 100) * 100) / 100
+        : Math.max(price - promo.discountValue, 0)
+      : undefined;
+  const displayPrice = discounted ?? price;
 
   return (
     <Link href={href} className="group block">
@@ -67,10 +78,17 @@ export function CourseCard({
             </div>
           )}
 
+          {/* Promo badge */}
+          {promo && !hasProgress && (
+            <span className="absolute left-2 top-2 rounded-md bg-emerald-600 px-2 py-0.5 text-xs font-semibold text-white">
+              {promo.discountType === "PERCENTAGE" ? `${promo.discountValue}% off` : `₹${promo.discountValue} off`}
+            </span>
+          )}
+
           {/* Duration / Price badge */}
           {price !== undefined && !hasProgress && (
             <span className="absolute bottom-2 right-2 rounded-md bg-black/60 px-2 py-0.5 text-xs text-white">
-              {price === 0 ? "Free" : `₹${price}`}
+              {displayPrice === 0 ? "Free" : `₹${displayPrice}`}
             </span>
           )}
         </div>
@@ -127,7 +145,18 @@ export function CourseCard({
 
           {price !== undefined && !hasProgress && (
             <p className="text-sm font-semibold">
-              {price === 0 ? "Free" : `₹${price}`}
+              {discounted !== undefined ? (
+                <>
+                  {discounted === 0 ? "Free" : `₹${discounted}`}
+                  <span className="ml-1 text-xs font-normal text-muted-foreground line-through">
+                    ₹{price}
+                  </span>
+                </>
+              ) : price === 0 ? (
+                "Free"
+              ) : (
+                `₹${price}`
+              )}
             </p>
           )}
         </div>

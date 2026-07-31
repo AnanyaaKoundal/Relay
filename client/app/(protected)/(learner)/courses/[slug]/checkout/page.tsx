@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { getPublicCourse } from "@/services/course.service";
-import { purchaseCourse, getCountry, validateCoupon, type PurchaseResponse, type ValidateCouponResult } from "@/services/payment.service";
+import { purchaseCourse, getCountry, validateCoupon } from "@/services/payment.service";
 import type { PublicCourseDetail } from "@/types/course.types";
 import { Loader2, CreditCard, Lock, Ticket } from "lucide-react";
+import { PurchaseResponse, ValidateCouponResult } from "@/types/payment.types";
 
 const COUNTRIES: Record<string, { name: string; taxName: string; taxRate: number }> = {
   IN: { name: "India", taxName: "GST", taxRate: 18 },
@@ -41,6 +42,9 @@ export default function CheckoutPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<ValidateCouponResult | null>(null);
   const [validatingCoupon, setValidatingCoupon] = useState(false);
 
+  const idempotencyKeyRef = useRef<string | null>(null);
+  if (!idempotencyKeyRef.current) idempotencyKeyRef.current = crypto.randomUUID();
+
   useEffect(() => {
     if (!slug) return;
     getPublicCourse(slug)
@@ -56,12 +60,13 @@ export default function CheckoutPage() {
           setCountry(data.country);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
     if (!course?.coupons?.length || appliedCoupon) return;
     const publicCoupon = course.coupons[0];
+    if (publicCoupon.discountType === "FIXED" && publicCoupon.discountValue > Number(course.price)) return;
     setCouponCode(publicCoupon.code);
     setAppliedCoupon({
       valid: true,
@@ -92,7 +97,7 @@ export default function CheckoutPage() {
     setValidatingCoupon(true);
     setCouponError("");
     try {
-      const result = await validateCoupon(couponCode.trim(), course.id);
+      const result = await validateCoupon(couponCode.trim(), course.id, subtotal);
       setAppliedCoupon(result);
     } catch (err) {
       setCouponError(err instanceof Error ? err.message : "Invalid coupon");
@@ -127,6 +132,7 @@ export default function CheckoutPage() {
         taxAmount,
         totalAmount,
         ...(appliedCoupon && { couponCode: couponCode.trim() }),
+        idempotencyKey: idempotencyKeyRef.current ?? undefined,
       });
 
       router.push(`/courses/${slug}/receipt?paymentId=${result.payment.id}`);

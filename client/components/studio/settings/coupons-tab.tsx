@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import * as couponApi from "@/services/coupon.service";
-import type { Coupon, CreateCouponInput } from "@/services/coupon.service";
+import type { Coupon, CreateCouponInput } from "@/types/coupon.types";
 import { Spinner } from "@/components/shared/spinner";
 import { Plus, Trash2, Pencil, X, Check } from "lucide-react";
 
@@ -24,6 +24,7 @@ export function CouponsTab({ courseId }: Props) {
   const [maxUses, setMaxUses] = useState("0");
   const [isPublic, setIsPublic] = useState(false);
   const [label, setLabel] = useState("");
+  const [startsAt, setStartsAt] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
 
   useEffect(() => {
@@ -42,6 +43,14 @@ export function CouponsTab({ courseId }: Props) {
     }
   }
 
+  const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+  function generateCode() {
+    const part = () =>
+      Array.from({ length: 4 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join("");
+    setCode(`${part()}-${part()}`);
+  }
+
   function resetForm() {
     setCode("");
     setType("PERCENTAGE");
@@ -49,6 +58,7 @@ export function CouponsTab({ courseId }: Props) {
     setMaxUses("0");
     setIsPublic(false);
     setLabel("");
+    setStartsAt("");
     setExpiresAt("");
     setEditing(null);
     setShowForm(false);
@@ -63,12 +73,18 @@ export function CouponsTab({ courseId }: Props) {
     setMaxUses(String(coupon.maxUses));
     setIsPublic(coupon.isPublic);
     setLabel(coupon.label ?? "");
+    setStartsAt(coupon.startsAt ? coupon.startsAt.slice(0, 10) : "");
     setExpiresAt(coupon.expiresAt ? coupon.expiresAt.slice(0, 10) : "");
     setShowForm(true);
   }
 
   async function handleSave() {
     if (!code.trim() || !value || Number(value) <= 0) return;
+
+    if (startsAt && expiresAt && new Date(startsAt) >= new Date(expiresAt)) {
+      setError("Start date must be before expiry date");
+      return;
+    }
 
     setSaving(true);
     setError("");
@@ -80,6 +96,7 @@ export function CouponsTab({ courseId }: Props) {
         maxUses: Number(maxUses) || 0,
         isPublic,
         label: label.trim() || undefined,
+        startsAt: startsAt || undefined,
         expiresAt: expiresAt || undefined,
       };
 
@@ -131,7 +148,16 @@ export function CouponsTab({ courseId }: Props) {
         <div className="rounded-lg border p-4 space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Code</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-muted-foreground">Code</label>
+                <button
+                  type="button"
+                  onClick={generateCode}
+                  className="text-xs font-medium text-primary hover:underline"
+                >
+                  Generate
+                </button>
+              </div>
               <input
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""))}
@@ -177,6 +203,15 @@ export function CouponsTab({ courseId }: Props) {
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
                 placeholder="Diwali offer"
+                className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Starts At (blank = immediately)</label>
+              <input
+                type="date"
+                value={startsAt}
+                onChange={(e) => setStartsAt(e.target.value)}
                 className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
@@ -253,6 +288,7 @@ export function CouponsTab({ courseId }: Props) {
                 </div>
                 <div className="text-[11px] text-muted-foreground">
                   Used {coupon.usedCount}/{coupon.maxUses === 0 ? "∞" : coupon.maxUses}
+                  {coupon.startsAt && ` · Starts ${new Date(coupon.startsAt).toLocaleDateString()}`}
                   {coupon.expiresAt && ` · Expires ${new Date(coupon.expiresAt).toLocaleDateString()}`}
                 </div>
               </div>

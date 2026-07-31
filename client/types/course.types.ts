@@ -38,6 +38,12 @@ export type UpdateCourseInput = Partial<CreateCourseInput> & {
   thumbnailUrl?: string | null;
 };
 
+export type Promo = {
+  discountType: "PERCENTAGE" | "FIXED";
+  discountValue: number;
+  label: string | null;
+};
+
 export type PublicCourse = {
   id: string;
   title: string;
@@ -52,6 +58,7 @@ export type PublicCourse = {
   updatedAt: string;
   instructor: { id: string; name: string } | null;
   _count: { chapters: number; enrollments: number };
+  promo?: Promo | null;
 };
 
 export type PublicCoupon = {

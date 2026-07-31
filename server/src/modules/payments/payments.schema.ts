@@ -7,4 +7,7 @@ export const purchaseSchema = z.object({
   taxAmount: z.number().min(0, "Tax amount cannot be negative"),
   totalAmount: z.number().positive("Total amount must be positive"),
   couponCode: z.string().optional(),
+  idempotencyKey: z.string().uuid().optional(),
 });
+
+export type PurchaseInput = z.infer<typeof purchaseSchema> & { userId: string };

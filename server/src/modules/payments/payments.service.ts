@@ -1,7 +1,9 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/app-error.js";
+import { Prisma, type Payment } from "@prisma/client";
 import { validateCoupon } from "../instructor/coupons.service.js";
 import crypto from "crypto";
+import type { PurchaseInput } from "./payments.schema.js";
 
 export const TAX_RATES: Record<string, number> = {
   IN: 18,
@@ -15,18 +17,37 @@ export const TAX_RATES: Record<string, number> = {
   AE: 5,
 };
 
-interface PurchaseInput {
-  userId: string;
-  courseId: string;
-  billingCountry: string;
-  subtotal: number;
-  taxAmount: number;
-  totalAmount: number;
-  couponCode?: string;
+
+function formatPayment(payment: Payment, enrollment: { id: string; courseId: string }) {
+  return {
+    payment: {
+      id: payment.id,
+      subtotal: Number(payment.subtotal),
+      discountAmount: Number(payment.discountAmount),
+      taxAmount: Number(payment.taxAmount),
+      totalAmount: Number(payment.totalAmount),
+      currency: payment.currency,
+      billingCountry: payment.billingCountry,
+      gatewayTransactionId: payment.gatewayTransactionId,
+      status: payment.status,
+      createdAt: payment.createdAt,
+    },
+    enrollment: { id: enrollment.id, courseId: enrollment.courseId },
+  };
 }
 
 export async function purchaseCourse(input: PurchaseInput) {
-  const { userId, courseId, billingCountry, subtotal, taxAmount, totalAmount, couponCode } = input;
+  const { userId, courseId, billingCountry, subtotal, taxAmount, totalAmount, couponCode, idempotencyKey } = input;
+
+  if (idempotencyKey) {
+    const existing = await prisma.payment.findFirst({
+      where: { userId, idempotencyKey },
+      include: { enrollments: { select: { id: true, courseId: true } } },
+    });
+    if (existing?.enrollments[0]) {
+      return formatPayment(existing, existing.enrollments[0]);
+    }
+  }
 
   const course = await prisma.course.findFirst({
     where: { id: courseId, status: "PUBLISHED" },
@@ -54,7 +75,10 @@ export async function purchaseCourse(input: PurchaseInput) {
     if (coupon.discountType === "PERCENTAGE") {
       discountAmount = Math.round(subtotal * (coupon.discountValue / 100) * 100) / 100;
     } else {
-      discountAmount = Math.min(coupon.discountValue, subtotal);
+      if (coupon.discountValue > subtotal) {
+        throw new AppError("This coupon exceeds the course price", 400);
+      }
+      discountAmount = coupon.discountValue;
     }
 
     couponId = coupon.couponId;
@@ -81,72 +105,72 @@ export async function purchaseCourse(input: PurchaseInput) {
 
   const gatewayTransactionId = `MOCK_TXN_${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
 
-  const [payment, enrollment] = await prisma.$transaction(async (tx) => {
-    if (couponId) {
-      const coupon = await tx.coupon.findUnique({ where: { id: couponId } });
-      if (!coupon || !coupon.isActive) {
-        throw new AppError("This coupon is no longer active", 400);
+  try {
+    const [payment, enrollment] = await prisma.$transaction(async (tx) => {
+      if (couponId) {
+        const coupon = await tx.coupon.findUnique({ where: { id: couponId } });
+        if (!coupon || !coupon.isActive) {
+          throw new AppError("This coupon is no longer active", 400);
+        }
+        if (coupon.maxUses > 0 && coupon.usedCount >= coupon.maxUses) {
+          throw new AppError("This coupon has reached its usage limit", 400);
+        }
+        if (coupon.expiresAt && new Date() > coupon.expiresAt) {
+          throw new AppError("This coupon has expired", 400);
+        }
+        if (coupon.discountType === "FIXED" && Number(coupon.discountValue) > subtotal) {
+          throw new AppError("This coupon exceeds the course price", 400);
+        }
+        await tx.coupon.update({
+          where: { id: couponId },
+          data: { usedCount: { increment: 1 } },
+        });
       }
-      if (coupon.maxUses > 0 && coupon.usedCount >= coupon.maxUses) {
-        throw new AppError("This coupon has reached its usage limit", 400);
-      }
-      if (coupon.expiresAt && new Date() > coupon.expiresAt) {
-        throw new AppError("This coupon has expired", 400);
-      }
-      await tx.coupon.update({
-        where: { id: couponId },
-        data: { usedCount: { increment: 1 } },
+
+      const payment = await tx.payment.create({
+        data: {
+          userId,
+          subtotal,
+          discountAmount,
+          taxAmount,
+          totalAmount,
+          currency: "INR",
+          billingCountry,
+          gateway: "MOCK",
+          gatewayTransactionId,
+          status: "SUCCEEDED",
+          couponId,
+          idempotencyKey,
+        },
       });
+
+      const enrollment = await tx.enrollment.create({
+        data: {
+          userId,
+          courseId,
+          paymentId: payment.id,
+        },
+        include: {
+          course: { select: { id: true, title: true } },
+        },
+      });
+
+      return [payment, enrollment] as const;
+    });
+
+    return formatPayment(payment, enrollment);
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002" && idempotencyKey) {
+      const winner = await prisma.payment.findFirst({
+        where: { userId, idempotencyKey },
+        include: { enrollments: { select: { id: true, courseId: true } } },
+      });
+      if (winner?.enrollments[0]) {
+        return formatPayment(winner, winner.enrollments[0]);
+      }
     }
-
-    const payment = await tx.payment.create({
-      data: {
-        userId,
-        subtotal,
-        discountAmount,
-        taxAmount,
-        totalAmount,
-        currency: "INR",
-        billingCountry,
-        gateway: "MOCK",
-        gatewayTransactionId,
-        status: "SUCCEEDED",
-        couponId,
-      },
-    });
-
-    const enrollment = await tx.enrollment.create({
-      data: {
-        userId,
-        courseId,
-        paymentId: payment.id,
-      },
-      include: {
-        course: { select: { id: true, title: true } },
-      },
-    });
-
-    return [payment, enrollment];
-  });
-
-  return {
-    payment: {
-      id: payment.id,
-      subtotal: Number(payment.subtotal),
-      discountAmount: Number(payment.discountAmount),
-      taxAmount: Number(payment.taxAmount),
-      totalAmount: Number(payment.totalAmount),
-      currency: payment.currency,
-      billingCountry: payment.billingCountry,
-      gatewayTransactionId: payment.gatewayTransactionId,
-      status: payment.status,
-      createdAt: payment.createdAt,
-    },
-    enrollment: {
-      id: enrollment.id,
-      courseId: enrollment.courseId,
-    },
-  };
+    throw e;
+  }
 }
 
 export async function getPayment(paymentId: string, userId: string) {

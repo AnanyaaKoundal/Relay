@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getPayment, type PaymentDetail } from "@/services/payment.service";
+import { getPayment } from "@/services/payment.service";
 import { CheckCircle2, Loader2, ArrowRight, Calendar, Hash, MapPin } from "lucide-react";
+import { PaymentDetail } from "@/types/payment.types";
 
 export default function ReceiptPage() {
   const params = useParams();

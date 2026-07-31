@@ -27,6 +27,13 @@ const difficulties = ["All", "Beginner", "Intermediate", "Advanced"];
 const THUMBNAIL = "/thumbnail.avif";
 
 function CourseCatalogCard({ course }: { course: PublicCourse }) {
+  const discounted =
+    course.promo && course.price > 0
+      ? course.promo.discountType === "PERCENTAGE"
+        ? Math.round(course.price * (1 - course.promo.discountValue / 100) * 100) / 100
+        : Math.max(course.price - course.promo.discountValue, 0)
+      : undefined;
+
   return (
     <Link href={`/courses/${course.id}`} className="group block">
       <div className="overflow-hidden rounded-xl border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
@@ -51,8 +58,21 @@ function CourseCatalogCard({ course }: { course: PublicCourse }) {
               {course.difficulty}
             </span>
           )}
+          {course.promo && (
+            <span className="absolute top-2 right-2 rounded-md bg-emerald-600 px-2 py-0.5 text-xs font-semibold text-white">
+              {course.promo.discountType === "PERCENTAGE"
+                ? `${course.promo.discountValue}% off`
+                : `₹${course.promo.discountValue} off`}
+            </span>
+          )}
           <span className="absolute bottom-2 right-2 rounded-md bg-black/60 px-2 py-0.5 text-xs text-white font-medium">
-            {Number(course.price) === 0 ? "Free" : `₹${course.price}`}
+            {discounted !== undefined
+              ? discounted === 0
+                ? "Free"
+                : `₹${discounted}`
+              : Number(course.price) === 0
+                ? "Free"
+                : `₹${course.price}`}
           </span>
         </div>
 
@@ -68,6 +88,14 @@ function CourseCatalogCard({ course }: { course: PublicCourse }) {
             </span>
             <span>{course._count.chapters} chapters</span>
           </div>
+          {discounted !== undefined && (
+            <p className="text-sm font-semibold">
+              {discounted === 0 ? "Free" : `₹${discounted}`}
+              <span className="ml-1 text-xs font-normal text-muted-foreground line-through">
+                ₹{course.price}
+              </span>
+            </p>
+          )}
         </div>
       </div>
     </Link>

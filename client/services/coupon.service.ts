@@ -1,4 +1,5 @@
 import { API_URL } from "@/lib/config";
+import { Coupon, CreateCouponInput } from "@/types/coupon.types";
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   let res: Response;
@@ -24,31 +25,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   return data as T;
-}
-
-export interface Coupon {
-  id: string;
-  courseId: string;
-  code: string;
-  discountType: "PERCENTAGE" | "FIXED";
-  discountValue: number;
-  maxUses: number;
-  usedCount: number;
-  isActive: boolean;
-  isPublic: boolean;
-  label: string | null;
-  expiresAt: string | null;
-  createdAt: string;
-}
-
-export interface CreateCouponInput {
-  code: string;
-  discountType: "PERCENTAGE" | "FIXED";
-  discountValue: number;
-  maxUses: number;
-  isPublic: boolean;
-  label?: string;
-  expiresAt?: string;
 }
 
 export async function listCoupons(courseId: string): Promise<Coupon[]> {
