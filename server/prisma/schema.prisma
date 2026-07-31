@@ -7,7 +7,234 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─── Enums ────────────────────────────────────────────────────────
+model User {
+  id             String             @id @default(uuid())
+  name           String
+  email          String             @unique
+  phone          String?
+  passwordHash   String             @map("password_hash")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  isAdmin        Boolean            @default(false) @map("is_admin")
+  isInstructor   Boolean            @default(false) @map("is_instructor")
+  courses        Course[]
+  enrollments    Enrollment[]
+  profile        InstructorProfile?
+  lessonProgress LessonProgress[]
+  notes          Note[]
+  payments       Payment[]
+  questions      Question[]
+
+  @@map("users")
+}
+
+model Course {
+  id           String       @id @default(uuid())
+  title        String
+  description  String
+  thumbnailUrl String?      @map("thumbnail_url")
+  category     String?
+  price        Decimal      @default(0)
+  difficulty   Difficulty?  @default(BEGINNER)
+  status       CourseStatus @default(DRAFT)
+  instructorId String       @map("instructor_id")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  publishedAt  DateTime?    @map("published_at")
+  chapters     Chapter[]
+  coupons      Coupon[]
+  instructor   User         @relation(fields: [instructorId], references: [id])
+  enrollments  Enrollment[]
+
+  @@index([status, createdAt])
+  @@index([instructorId, createdAt])
+  @@map("courses")
+}
+
+model Chapter {
+  id         String   @id @default(uuid())
+  title      String
+  orderIndex Int      @map("order_index")
+  courseId   String   @map("course_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  titleDraft String?  @map("title_draft")
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons    Lesson[]
+
+  @@index([courseId, orderIndex])
+  @@map("chapters")
+}
+
+model Lesson {
+  id                 String           @id @default(uuid())
+  title              String
+  orderIndex         Int              @map("order_index")
+  contentType        ContentType      @map("content_type")
+  contentId          String           @map("content_id")
+  durationSeconds    Int?             @map("duration_seconds")
+  chapterId          String           @map("chapter_id")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+  isPreview          Boolean          @default(false) @map("is_preview")
+  publishedContentId String?          @map("published_content_id")
+  status             LessonStatus     @default(DRAFT)
+  progress           LessonProgress[]
+  chapter            Chapter          @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  notes              Note[]
+  questions          Question[]
+
+  @@index([chapterId, orderIndex])
+  @@index([chapterId, status])
+  @@map("lessons")
+}
+
+model VideoContent {
+  id               String  @id @default(uuid())
+  s3Key            String  @map("s3_key")
+  durationSeconds  Int?    @map("duration_seconds")
+  videoUrl         String? @map("video_url")
+  hlsUrl           String? @map("hls_url")
+  processingStatus String  @default("PENDING") @map("processing_status")
+
+  @@map("video_contents")
+}
+
+model TextContent {
+  id   String @id @default(uuid())
+  body String
+
+  @@map("text_contents")
+}
+
+model QuizContent {
+  id        String @id @default(uuid())
+  questions String
+
+  @@map("quiz_contents")
+}
+
+model Enrollment {
+  id              String           @id @default(uuid())
+  userId          String           @map("user_id")
+  courseId        String           @map("course_id")
+  paymentId       String?          @map("payment_id")
+  progressPercent Int              @default(0) @map("progress_percent")
+  status          EnrollmentStatus @default(ACTIVE)
+  enrolledAt      DateTime         @default(now()) @map("enrolled_at")
+  course          Course           @relation(fields: [courseId], references: [id])
+  payment         Payment?         @relation(fields: [paymentId], references: [id])
+  user            User             @relation(fields: [userId], references: [id])
+  progress        LessonProgress[]
+
+  @@unique([userId, courseId])
+  @@index([userId, enrolledAt])
+  @@map("enrollments")
+}
+
+model Payment {
+  id                   String         @id @default(uuid())
+  userId               String         @map("user_id")
+  currency             String         @default("INR")
+  gateway              PaymentGateway
+  gatewayTransactionId String         @map("gateway_transaction_id")
+  status               PaymentStatus  @default(PENDING)
+  invoiceUrl           String?        @map("invoice_url")
+  createdAt            DateTime       @default(now()) @map("created_at")
+  billingCountry       String         @map("billing_country")
+  couponId             String?        @map("coupon_id")
+  discountAmount       Decimal        @default(0) @map("discount_amount")
+  subtotal             Decimal
+  taxAmount            Decimal        @map("tax_amount")
+  totalAmount          Decimal        @map("total_amount")
+  enrollments          Enrollment[]
+  user                 User           @relation(fields: [userId], references: [id])
+  idempotencyKey       String?        @map("idempotency_key")
+
+  @@unique([userId, idempotencyKey])
+  @@map("payments")
+}
+
+model Note {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  videoTimestamp Int?     @map("video_timestamp")
+  content        String
+  createdAt      DateTime @default(now()) @map("created_at")
+  lessonId       String   @map("lesson_id")
+  lesson         Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [userId], references: [id])
+
+  @@map("notes")
+}
+
+model Question {
+  id           String     @id @default(uuid())
+  userId       String     @map("user_id")
+  parentId     String?    @map("parent_id")
+  questionText String     @map("question_text")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  lessonId     String     @map("lesson_id")
+  lesson       Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  parent       Question?  @relation("QuestionReplies", fields: [parentId], references: [id])
+  replies      Question[] @relation("QuestionReplies")
+  user         User       @relation(fields: [userId], references: [id])
+
+  @@map("questions")
+}
+
+model InstructorProfile {
+  id         String   @id @default(uuid())
+  userId     String   @unique @map("user_id")
+  headline   String
+  bio        String?
+  expertise  String?
+  experience String?
+  twitter    String?
+  linkedin   String?
+  github     String?
+  website    String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("instructor_profiles")
+}
+
+model LessonProgress {
+  id           String     @id @default(uuid())
+  userId       String     @map("user_id")
+  lessonId     String     @map("lesson_id")
+  enrollmentId String     @map("enrollment_id")
+  completedAt  DateTime   @default(now()) @map("completed_at")
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  lesson       Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id])
+
+  @@unique([userId, lessonId])
+  @@index([enrollmentId])
+  @@map("lesson_progress")
+}
+
+model Coupon {
+  id            String    @id @default(uuid())
+  courseId      String    @map("course_id")
+  code          String
+  discountType  String
+  discountValue Decimal
+  maxUses       Int
+  usedCount     Int       @default(0)
+  isActive      Boolean   @default(true)
+  isPublic      Boolean   @default(false)
+  label         String?
+  startsAt      DateTime? @map("starts_at")
+  expiresAt     DateTime? @map("expires_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  course        Course    @relation(fields: [courseId], references: [id])
+
+  @@unique([courseId, code])
+  @@map("coupons")
+}
 
 enum CourseStatus {
   DRAFT
@@ -46,247 +273,7 @@ enum PaymentStatus {
 }
 
 enum PaymentGateway {
-  MOCK
   STRIPE
   RAZORPAY
-}
-
-// ─── Models ───────────────────────────────────────────────────────
-
-model User {
-  id           String   @id @default(uuid())
-  name         String
-  email        String   @unique
-  phone        String?
-  passwordHash String   @map("password_hash")
-  isAdmin      Boolean  @default(false) @map("is_admin")
-  isInstructor Boolean  @default(false) @map("is_instructor")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-
-  profile        InstructorProfile?
-  courses        Course[]
-  enrollments    Enrollment[]
-  payments       Payment[]
-  notes          Note[]
-  questions      Question[]
-  lessonProgress LessonProgress[]
-
-  @@map("users")
-}
-
-model Course {
-  id             String       @id @default(uuid())
-  title          String
-  description    String
-  thumbnailUrl   String?      @map("thumbnail_url")
-  category       String?
-  price          Decimal      @default(0)
-  difficulty     Difficulty?  @default(BEGINNER)
-  status         CourseStatus @default(DRAFT)
-  publishedAt    DateTime?    @map("published_at")
-  instructorId   String       @map("instructor_id")
-  createdAt      DateTime     @default(now()) @map("created_at")
-  updatedAt      DateTime     @updatedAt @map("updated_at")
-
-  instructor    User         @relation(fields: [instructorId], references: [id])
-  chapters      Chapter[]
-  enrollments   Enrollment[]
-  coupons       Coupon[]
-
-  @@index([status, createdAt])
-  @@index([instructorId, createdAt])
-  @@map("courses")
-}
-
-model Chapter {
-  id         String    @id @default(uuid())
-  title      String
-  titleDraft String?   @map("title_draft")
-  orderIndex Int       @map("order_index")
-  courseId    String    @map("course_id")
-  createdAt  DateTime  @default(now()) @map("created_at")
-  updatedAt  DateTime  @updatedAt @map("updated_at")
-
-  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  lessons Lesson[]
-
-  @@index([courseId, orderIndex])
-  @@map("chapters")
-}
-
-model Lesson {
-  id                  String       @id @default(uuid())
-  title               String
-  orderIndex          Int          @map("order_index")
-  contentType         ContentType  @map("content_type")
-  contentId           String       @map("content_id")
-  publishedContentId  String?      @map("published_content_id")
-  status              LessonStatus @default(DRAFT)
-  durationSeconds     Int?         @map("duration_seconds")
-  isPreview           Boolean      @default(false) @map("is_preview")
-  chapterId           String       @map("chapter_id")
-  createdAt           DateTime     @default(now()) @map("created_at")
-  updatedAt           DateTime     @updatedAt @map("updated_at")
-
-  chapter  Chapter    @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-  notes    Note[]
-  questions Question[]
-  progress LessonProgress[]
-
-  @@index([chapterId, orderIndex])
-  @@index([chapterId, status])
-  @@map("lessons")
-}
-
-model VideoContent {
-  id              String  @id @default(uuid())
-  s3Key           String  @map("s3_key")
-  videoUrl        String? @map("video_url")
-  hlsUrl          String? @map("hls_url")
-  processingStatus String @default("PENDING") @map("processing_status")
-  durationSeconds Int?    @map("duration_seconds")
-
-  @@map("video_contents")
-}
-
-model TextContent {
-  id   String @id @default(uuid())
-  body String
-
-  @@map("text_contents")
-}
-
-model QuizContent {
-  id        String @id @default(uuid())
-  questions String // JSON
-
-  @@map("quiz_contents")
-}
-
-model Enrollment {
-  id              String           @id @default(uuid())
-  userId          String           @map("user_id")
-  courseId         String           @map("course_id")
-  paymentId       String?          @map("payment_id")
-  progressPercent Int              @default(0) @map("progress_percent")
-  status          EnrollmentStatus @default(ACTIVE)
-  enrolledAt      DateTime         @default(now()) @map("enrolled_at")
-
-  user    User             @relation(fields: [userId], references: [id])
-  course  Course           @relation(fields: [courseId], references: [id])
-  payment Payment?         @relation(fields: [paymentId], references: [id])
-  progress LessonProgress[]
-
-  @@unique([userId, courseId])
-  @@index([userId, enrolledAt])
-  @@map("enrollments")
-}
-
-model Payment {
-  id                   String         @id @default(uuid())
-  userId               String         @map("user_id")
-  subtotal             Decimal
-  discountAmount       Decimal        @default(0) @map("discount_amount")
-  taxAmount            Decimal        @map("tax_amount")
-  totalAmount          Decimal        @map("total_amount")
-  currency             String         @default("INR")
-  billingCountry       String         @map("billing_country")
-  gateway              PaymentGateway
-  gatewayTransactionId String         @map("gateway_transaction_id")
-  status               PaymentStatus  @default(PENDING)
-  couponId             String?        @map("coupon_id")
-  invoiceUrl           String?        @map("invoice_url")
-  createdAt            DateTime       @default(now()) @map("created_at")
-
-  user        User        @relation(fields: [userId], references: [id])
-  enrollments Enrollment[]
-
-  @@map("payments")
-}
-
-model Note {
-  id             String   @id @default(uuid())
-  userId         String   @map("user_id")
-  lessonId     String   @map("lesson_id")
-  videoTimestamp Int?     @map("video_timestamp")
-  content        String
-  createdAt      DateTime @default(now()) @map("created_at")
-
-  user     User      @relation(fields: [userId], references: [id])
-  lesson Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-
-  @@map("notes")
-}
-
-model Question {
-  id         String   @id @default(uuid())
-  userId     String   @map("user_id")
-  lessonId String   @map("lesson_id")
-  parentId   String?  @map("parent_id")
-  questionText String @map("question_text")
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  user     User      @relation(fields: [userId], references: [id])
-  lesson Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  parent   Question? @relation("QuestionReplies", fields: [parentId], references: [id])
-  replies  Question[] @relation("QuestionReplies")
-
-  @@map("questions")
-}
-
-model InstructorProfile {
-  id          String   @id @default(uuid())
-  userId      String   @unique @map("user_id")
-  headline    String
-  bio         String?
-  expertise   String?
-  experience  String?
-  twitter     String?
-  linkedin    String?
-  github      String?
-  website     String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("instructor_profiles")
-}
-
-model LessonProgress {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
-  lessonId    String   @map("lesson_id")
-  enrollmentId String  @map("enrollment_id")
-  completedAt DateTime @default(now()) @map("completed_at")
-
-  user       User       @relation(fields: [userId], references: [id])
-  lesson     Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, lessonId])
-  @@index(enrollmentId)
-  @@map("lesson_progress")
-}
-
-model Coupon {
-  id            String    @id @default(uuid())
-  courseId      String    @map("course_id")
-  code          String
-  discountType  String    // "PERCENTAGE" or "FIXED"
-  discountValue Decimal
-  maxUses       Int       // total redemptions allowed, 0 = unlimited
-  usedCount     Int       @default(0)
-  isActive      Boolean   @default(true)
-  isPublic      Boolean   @default(false) // auto-applied, shows on course page
-  label         String?   // "Diwali offer", "Special offer" — shown on course page
-  startsAt      DateTime? @map("starts_at")
-  expiresAt     DateTime? @map("expires_at")
-  createdAt     DateTime  @default(now()) @map("created_at")
-
-  course Course @relation(fields: [courseId], references: [id])
-
-  @@unique([courseId, code])
-  @@map("coupons")
+  MOCK
 }

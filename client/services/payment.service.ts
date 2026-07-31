@@ -32,6 +32,15 @@ export interface PurchaseRequest {
   subtotal: number;
   taxAmount: number;
   totalAmount: number;
+  couponCode?: string;
+}
+
+export interface ValidateCouponResult {
+  valid: boolean;
+  couponId: string;
+  discountType: "PERCENTAGE" | "FIXED";
+  discountValue: number;
+  label: string | null;
 }
 
 export interface PurchaseResponse {
@@ -83,4 +92,8 @@ export async function purchaseCourse(input: PurchaseRequest): Promise<PurchaseRe
 
 export async function getPayment(paymentId: string): Promise<PaymentDetail> {
   return request<PaymentDetail>(`/payments/${paymentId}`);
+}
+
+export async function validateCoupon(code: string, courseId: string): Promise<ValidateCouponResult> {
+  return request<ValidateCouponResult>(`/payments/validate-coupon?code=${encodeURIComponent(code)}&courseId=${courseId}`);
 }

@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import * as paymentService from "./payments.service.js";
 import { purchaseSchema } from "./payments.schema.js";
+import { validateCoupon } from "../instructor/coupons.service.js";
 import { wrap } from "../../middleware/wrap.js";
 import { logger } from "../../utils/logger.js";
 
@@ -21,7 +22,7 @@ export const purchase = wrap(async (req: Request, res: Response) => {
 });
 
 export const getPayment = wrap(async (req: Request, res: Response) => {
-  const payment = await paymentService.getPayment(req.params.paymentId, req.user!.userId);
+  const payment = await paymentService.getPayment(req.params.paymentId as string, req.user!.userId);
   res.json(payment);
 });
 
@@ -48,4 +49,17 @@ export const getCountry = wrap(async (req: Request, res: Response) => {
     // If the API is down or IP is invalid, silently fall back
     res.json({ country: null });
   }
+});
+
+export const checkCoupon = wrap(async (req: Request, res: Response) => {
+  const code = req.query.code as string;
+  const courseId = req.query.courseId as string;
+
+  if (!code || !courseId) {
+    res.status(400).json({ error: "code and courseId are required" });
+    return;
+  }
+
+  const result = await validateCoupon(code, courseId);
+  res.json({ valid: true, ...result });
 });

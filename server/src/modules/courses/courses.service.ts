@@ -91,6 +91,19 @@ export async function getPublicCourse(slug: string) {
           },
         },
       },
+      coupons: {
+        where: { isPublic: true, isActive: true },
+        select: {
+          id: true,
+          code: true,
+          discountType: true,
+          discountValue: true,
+          label: true,
+          expiresAt: true,
+          maxUses: true,
+          usedCount: true,
+        },
+      },
       _count: { select: { enrollments: true } },
     },
   });
@@ -99,7 +112,23 @@ export async function getPublicCourse(slug: string) {
     throw new AppError("Course not found", 404);
   }
 
-  return course;
+  const now = new Date();
+  const validCoupons = course.coupons
+    .filter((c) => {
+      if (c.maxUses > 0 && c.usedCount >= c.maxUses) return false;
+      if (c.expiresAt && now > c.expiresAt) return false;
+      return true;
+    })
+    .map((c) => ({
+      id: c.id,
+      code: c.code,
+      discountType: c.discountType,
+      discountValue: Number(c.discountValue),
+      label: c.label,
+      expiresAt: c.expiresAt,
+    }));
+
+  return { ...course, coupons: validCoupons };
 }
 
 /* ─── Instructor ─── */

@@ -5,9 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { getPublicCourse } from "@/services/course.service";
-import { purchaseCourse, getCountry, type PurchaseResponse } from "@/services/payment.service";
+import { purchaseCourse, getCountry, validateCoupon, type PurchaseResponse, type ValidateCouponResult } from "@/services/payment.service";
 import type { PublicCourseDetail } from "@/types/course.types";
-import { Loader2, CreditCard, Lock } from "lucide-react";
+import { Loader2, CreditCard, Lock, Ticket } from "lucide-react";
 
 const COUNTRIES: Record<string, { name: string; taxName: string; taxRate: number }> = {
   IN: { name: "India", taxName: "GST", taxRate: 18 },
@@ -29,11 +29,17 @@ export default function CheckoutPage() {
   const [course, setCourse] = useState<PublicCourseDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [country, setCountry] = useState("IN");
+
   const [cardNumber, setCardNumber] = useState("");
   const [expiry, setExpiry] = useState("");
   const [cvc, setCvc] = useState("");
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
+  const [couponError, setCouponError] = useState("");
+
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<ValidateCouponResult | null>(null);
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -46,22 +52,61 @@ export default function CheckoutPage() {
   useEffect(() => {
     getCountry()
       .then((data) => {
-        // Only auto-select if the detected country is in our tax map
         if (data.country && COUNTRIES[data.country]) {
           setCountry(data.country);
         }
       })
-      .catch(() => {
-        // Silently fall back to default "IN"
-      });
+      .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!course?.coupons?.length || appliedCoupon) return;
+    const publicCoupon = course.coupons[0];
+    setCouponCode(publicCoupon.code);
+    setAppliedCoupon({
+      valid: true,
+      couponId: publicCoupon.id,
+      discountType: publicCoupon.discountType,
+      discountValue: publicCoupon.discountValue,
+      label: publicCoupon.label,
+    });
+  }, [course]);
 
   const taxRate = COUNTRIES[country]?.taxRate ?? 0;
   const subtotal = course ? Number(course.price) : 0;
-  const taxAmount = Math.round(subtotal * (taxRate / 100) * 100) / 100;
-  const totalAmount = Math.round((subtotal + taxAmount) * 100) / 100;
+
+  const discountAmount = appliedCoupon
+    ? appliedCoupon.discountType === "PERCENTAGE"
+      ? Math.round(subtotal * (appliedCoupon.discountValue / 100) * 100) / 100
+      : Math.min(appliedCoupon.discountValue, subtotal)
+    : 0;
+
+  const discountedSubtotal = subtotal - discountAmount;
+  const taxAmount = Math.round(discountedSubtotal * (taxRate / 100) * 100) / 100;
+  const totalAmount = Math.round((discountedSubtotal + taxAmount) * 100) / 100;
 
   const formatPrice = (amount: number) => `₹${amount.toFixed(2)}`;
+
+  async function handleApplyCoupon() {
+    if (!course || !couponCode.trim()) return;
+    setValidatingCoupon(true);
+    setCouponError("");
+    try {
+      const result = await validateCoupon(couponCode.trim(), course.id);
+      setAppliedCoupon(result);
+    } catch (err) {
+      setCouponError(err instanceof Error ? err.message : "Invalid coupon");
+      setAppliedCoupon(null);
+    } finally {
+      setValidatingCoupon(false);
+    }
+  }
+
+  function handleRemoveCoupon() {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponError("");
+  }
 
   async function handlePay() {
     if (!course) return;
@@ -81,6 +126,7 @@ export default function CheckoutPage() {
         subtotal,
         taxAmount,
         totalAmount,
+        ...(appliedCoupon && { couponCode: couponCode.trim() }),
       });
 
       router.push(`/courses/${slug}/receipt?paymentId=${result.payment.id}`);
@@ -123,19 +169,84 @@ export default function CheckoutPage() {
       </Link>
 
       <div className="mt-6 grid gap-8 md:grid-cols-[1fr_380px]">
-        {/* Left — payment form */}
         <div className="space-y-6">
           <div>
             <h1 className="text-xl font-bold">Checkout</h1>
             <p className="text-sm text-muted-foreground mt-1">Complete your purchase</p>
           </div>
 
+          {/* Coupon */}
+          <div className="rounded-lg border bg-card p-4 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Ticket className="size-4" />
+              {appliedCoupon ? "Coupon applied" : "Have a coupon?"}
+            </div>
+            {appliedCoupon ? (
+              <div className="flex items-center gap-2">
+                <input
+                  value={couponCode}
+                  readOnly
+                  className="flex h-10 flex-1 rounded-lg border bg-muted px-3 py-2 text-sm font-mono uppercase outline-none cursor-default"
+                />
+                <button
+                  type="button"
+                  onClick={handleRemoveCoupon}
+                  className="inline-flex h-10 items-center rounded-lg border px-3 text-xs font-medium hover:bg-muted transition-colors shrink-0"
+                >
+                  Change
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleApplyCoupon(); }}
+                  placeholder="Enter code"
+                  className="flex h-10 flex-1 rounded-lg border bg-background px-3 py-2 text-sm font-mono uppercase outline-none focus:ring-2 focus:ring-ring"
+                />
+                <button
+                  type="button"
+                  onClick={handleApplyCoupon}
+                  disabled={validatingCoupon || !couponCode.trim()}
+                  className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-medium text-primary-foreground hover:bg-primary/80 transition-colors disabled:opacity-50 shrink-0"
+                >
+                  {validatingCoupon ? <Loader2 className="size-3.5 animate-spin" /> : "Apply"}
+                </button>
+              </div>
+            )}
+            {appliedCoupon && (
+              <div className="text-xs text-emerald-600">
+                {appliedCoupon.discountType === "PERCENTAGE"
+                  ? `${appliedCoupon.discountValue}% off`
+                  : `₹${appliedCoupon.discountValue} off`}
+                {appliedCoupon.label && <span className="text-muted-foreground ml-1">({appliedCoupon.label})</span>}
+              </div>
+            )}
+            {couponError && <p className="text-xs text-destructive">{couponError}</p>}
+          </div>
+
           {/* Price breakdown */}
           <div className="rounded-lg border bg-card p-4 space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Subtotal</span>
-              <span>{formatPrice(subtotal)}</span>
+              <span className={discountAmount > 0 ? "line-through text-muted-foreground" : ""}>{formatPrice(subtotal)}</span>
             </div>
+            {appliedCoupon && (
+              <div className="flex justify-between text-emerald-600">
+                <span>
+                  Discount
+                  {appliedCoupon.label && <span className="text-muted-foreground ml-1">({appliedCoupon.label})</span>}
+                </span>
+                <span>-{formatPrice(discountAmount)}</span>
+              </div>
+            )}
+            {discountAmount > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Discounted subtotal</span>
+                <span>{formatPrice(discountedSubtotal)}</span>
+              </div>
+            )}
             {taxRate > 0 && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{COUNTRIES[country]?.taxName ?? "Tax"} ({taxRate}%)</span>

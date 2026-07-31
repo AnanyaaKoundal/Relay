@@ -6,4 +6,5 @@ export const purchaseSchema = z.object({
   subtotal: z.number().positive("Subtotal must be positive"),
   taxAmount: z.number().min(0, "Tax amount cannot be negative"),
   totalAmount: z.number().positive("Total amount must be positive"),
+  couponCode: z.string().optional(),
 });

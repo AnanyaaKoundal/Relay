@@ -145,8 +145,35 @@ export default function CourseDetailPage() {
         {/* Sticky CTA card */}
         <div className="lg:sticky lg:top-20 lg:self-start">
           <div className="rounded-xl border bg-card p-6 space-y-4">
-            <div className="text-2xl font-bold">
-              {Number(course.price) === 0 ? "Free" : `₹${course.price}`}
+            <div>
+              {Number(course.price) === 0 ? (
+                <div className="text-2xl font-bold">Free</div>
+              ) : (
+                <div>
+                  {course.coupons?.[0] ? (
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-bold">
+                        ₹{course.coupons[0].discountType === "PERCENTAGE"
+                          ? Number(course.price) - Math.round(Number(course.price) * course.coupons[0].discountValue / 100)
+                          : Math.max(0, Number(course.price) - course.coupons[0].discountValue)
+                        }
+                      </span>
+                      <span className="text-sm text-muted-foreground line-through">₹{course.price}</span>
+                    </div>
+                  ) : (
+                    <div className="text-2xl font-bold">₹{course.price}</div>
+                  )}
+                  {course.coupons?.[0] && (
+                    <div className="mt-1 text-xs text-emerald-600 font-medium">
+                      {course.coupons[0].discountType === "PERCENTAGE"
+                        ? `${course.coupons[0].discountValue}% off`
+                        : `₹${course.coupons[0].discountValue} off`}
+                      {course.coupons[0].label && ` — ${course.coupons[0].label}`}
+                      <span className="ml-1.5 text-muted-foreground">Auto-applied at checkout</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {enrollment ? (
@@ -162,7 +189,11 @@ export default function CourseDetailPage() {
                 href={`/courses/${slug}/checkout`}
                 className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
               >
-                Purchase — ₹{course.price}
+                Purchase{course.coupons?.[0] ? ` — ₹${
+                  course.coupons[0].discountType === "PERCENTAGE"
+                    ? Number(course.price) - Math.round(Number(course.price) * course.coupons[0].discountValue / 100)
+                    : Math.max(0, Number(course.price) - course.coupons[0].discountValue)
+                }` : ` — ₹${course.price}`}
                 <ArrowRight className="size-4" />
               </Link>
             ) : (

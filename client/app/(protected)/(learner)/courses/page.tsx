@@ -52,7 +52,7 @@ function CourseCatalogCard({ course }: { course: PublicCourse }) {
             </span>
           )}
           <span className="absolute bottom-2 right-2 rounded-md bg-black/60 px-2 py-0.5 text-xs text-white font-medium">
-            {Number(course.price) === 0 ? "Free" : `$${course.price}`}
+            {Number(course.price) === 0 ? "Free" : `₹${course.price}`}
           </span>
         </div>
 

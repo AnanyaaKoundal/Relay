@@ -54,6 +54,15 @@ export type PublicCourse = {
   _count: { chapters: number; enrollments: number };
 };
 
+export type PublicCoupon = {
+  id: string;
+  code: string;
+  discountType: "PERCENTAGE" | "FIXED";
+  discountValue: number;
+  label: string | null;
+  expiresAt: string | null;
+};
+
 export type PublicCourseDetail = PublicCourse & {
   chapters: {
     id: string;
@@ -67,6 +76,7 @@ export type PublicCourseDetail = PublicCourse & {
       isPreview: boolean;
     }[];
   }[];
+  coupons: PublicCoupon[];
 };
 
 export type BrowseResult = {

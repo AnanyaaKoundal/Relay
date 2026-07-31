@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { purchase, getPayment, getCountry } from "./payments.controller.js";
+import { purchase, getPayment, getCountry, checkCoupon } from "./payments.controller.js";
 import { authenticate } from "../../middleware/authenticate.js";
 
 const router = Router();
@@ -7,6 +7,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get("/country", getCountry); // must be before /:paymentId
+router.get("/validate-coupon", checkCoupon);
 router.post("/purchase", purchase);
 router.get("/:paymentId", getPayment);
 

@@ -70,7 +70,7 @@ export function CourseCard({
           {/* Duration / Price badge */}
           {price !== undefined && !hasProgress && (
             <span className="absolute bottom-2 right-2 rounded-md bg-black/60 px-2 py-0.5 text-xs text-white">
-              {price === 0 ? "Free" : `$${price}`}
+              {price === 0 ? "Free" : `₹${price}`}
             </span>
           )}
         </div>
@@ -127,7 +127,7 @@ export function CourseCard({
 
           {price !== undefined && !hasProgress && (
             <p className="text-sm font-semibold">
-              {price === 0 ? "Free" : `$${price}`}
+              {price === 0 ? "Free" : `₹${price}`}
             </p>
           )}
         </div>
