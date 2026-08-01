@@ -2,74 +2,214 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getMyCourses } from "@/services/course.service";
-import type { CourseListItem } from "@/types/course.types";
-import { StatusBadge } from "@/components/shared/status-badge";
-import { EmptyState } from "@/components/shared/empty-state";
+import { getStudioOverview } from "@/services/studio.service";
+import type { StudioOverview, StudioRange } from "@/types/studio.types";
+import { RangeSelector } from "@/components/studio/overview/range-selector";
+import { KpiCard, type KpiCardProps } from "@/components/studio/overview/kpi-card";
+import { KpiCardSkeleton } from "@/components/studio/overview/kpi-card-skeleton";
+import { RevenueChart } from "@/components/studio/overview/revenue-chart";
+import { ChartSkeleton } from "@/components/studio/overview/chart-skeleton";
+import { TopCoursesTable } from "@/components/studio/overview/top-courses-table";
+import { TopCoursesSkeleton } from "@/components/studio/overview/top-courses-skeleton";
+import { AttentionCard } from "@/components/studio/overview/attention-card";
+import { RecentActivity } from "@/components/studio/overview/recent-activity";
+import { formatINR, bucketForRange, rangeText } from "@/lib/studio-utils";
+import { IndianRupee, Users, Receipt, GraduationCap } from "lucide-react";
+
+type OverviewParams = { range: StudioRange; from?: string; to?: string };
+type LoadedStats = { data: StudioOverview; params: string };
 
 export default function StudioOverviewPage() {
-  const [courses, setCourses] = useState<CourseListItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [params, setParams] = useState<OverviewParams>({ range: "30d" });
+  const [loaded, setLoaded] = useState<LoadedStats | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const paramsKey = `${params.range}|${params.from ?? ""}|${params.to ?? ""}`;
+  const isRefreshing = loaded !== null && loaded.params !== paramsKey;
 
   useEffect(() => {
-    getMyCourses()
-      .then(setCourses)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+    let cancelled = false;
+    getStudioOverview(params.range, params.from, params.to)
+      .then((data) => {
+        if (cancelled) return;
+        setLoaded({ data, params: paramsKey });
+        setError(null);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Failed to load your stats.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [params.range, params.from, params.to, paramsKey]);
 
-  const published = courses.filter((c) => c.status === "PUBLISHED");
-  const drafts = courses.filter((c) => c.status === "DRAFT");
-  const totalStudents = courses.reduce((sum, c) => sum + c._count.enrollments, 0);
+  const stats = loaded?.data ?? null;
+
+  const skeletonView = (
+    <>
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <KpiCardSkeleton key={i} />
+        ))}
+      </div>
+
+      <div className="mt-6 rounded-xl border bg-card p-5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium">Performance</h2>
+          <span className="text-xs text-muted-foreground">Revenue & enrollments</span>
+        </div>
+        <div className="mt-4">
+          <ChartSkeleton />
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <div className="h-56 rounded-xl border bg-card p-5">
+          <div className="h-3 w-28 rounded bg-muted" />
+          <div className="mt-5 space-y-3">
+            <div className="h-10 rounded-lg bg-muted/60" />
+            <div className="h-10 rounded-lg bg-muted/60" />
+            <div className="h-10 rounded-lg bg-muted/60" />
+          </div>
+        </div>
+        <div className="h-56 rounded-xl border bg-card p-5">
+          <div className="h-3 w-24 rounded bg-muted" />
+          <div className="mt-5 space-y-3">
+            <div className="h-9 rounded-lg bg-muted/60" />
+            <div className="h-9 rounded-lg bg-muted/60" />
+            <div className="h-9 rounded-lg bg-muted/60" />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-xl border bg-card p-5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium">Top Courses</h2>
+          <span className="text-xs text-muted-foreground">Your best performers</span>
+        </div>
+        <div className="mt-2">
+          <TopCoursesSkeleton />
+        </div>
+      </div>
+    </>
+  );
+
+  const kpiCards: KpiCardProps[] = stats
+    ? [
+        {
+          label: "Revenue",
+          value: formatINR(stats.kpis.revenue.value),
+          delta: stats.kpis.revenue.delta,
+          sub: rangeText(params.range),
+          icon: IndianRupee,
+          tone: "emerald",
+          newBadge: true,
+        },
+        {
+          label: "Students",
+          value: String(stats.kpis.students.value),
+          delta: stats.kpis.students.delta,
+          sub: rangeText(params.range),
+          icon: Users,
+          tone: "sky",
+          newBadge: true,
+        },
+        {
+          label: "Orders",
+          value: String(stats.kpis.orders.value),
+          delta: stats.kpis.orders.delta,
+          sub: rangeText(params.range),
+          icon: Receipt,
+          tone: "amber",
+          newBadge: true,
+        },
+        {
+          label: "Completion",
+          value: `${stats.kpis.completionRate}%`,
+          delta: null,
+          sub: "all-time completion rate",
+          icon: GraduationCap,
+          tone: "violet",
+        },
+      ]
+    : [];
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <h1 className="text-2xl font-semibold">Overview</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Summary of your studio activity.</p>
-
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border bg-card p-5">
-          <p className="text-xs text-muted-foreground font-medium">Total Courses</p>
-          <p className="mt-1 text-2xl font-semibold">{loading ? "-" : courses.length}</p>
+    <div className="mx-auto max-w-6xl">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Your studio at a glance.</p>
         </div>
-        <div className="rounded-xl border bg-card p-5">
-          <p className="text-xs text-muted-foreground font-medium">Published</p>
-          <p className="mt-1 text-2xl font-semibold">{loading ? "-" : published.length}</p>
-        </div>
-        <div className="rounded-xl border bg-card p-5">
-          <p className="text-xs text-muted-foreground font-medium">Drafts</p>
-          <p className="mt-1 text-2xl font-semibold">{loading ? "-" : drafts.length}</p>
-        </div>
-        <div className="rounded-xl border bg-card p-5">
-          <p className="text-xs text-muted-foreground font-medium">Students</p>
-          <p className="mt-1 text-2xl font-semibold">{loading ? "-" : totalStudents}</p>
-        </div>
+        <RangeSelector
+          value={params.range}
+          onChange={(range) => setParams({ range, from: undefined, to: undefined })}
+          onApplyCustom={(from, to) => setParams({ range: "custom", from, to })}
+          customRange={
+            params.range === "custom" ? { from: params.from ?? "", to: params.to ?? "" } : undefined
+          }
+        />
       </div>
 
-      <div className="mt-10">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium">Recent Courses</h2>
-          <Link href="/studio/courses" className="text-xs text-muted-foreground hover:text-foreground transition-colors">View all</Link>
+      {!loaded && error ? (
+        <div className="mt-8 rounded-xl border border-destructive/20 bg-destructive/5 p-6 text-center text-sm text-destructive">
+          {error}
         </div>
-        {!loading && courses.length === 0 ? (
-          <EmptyState
-            title="No courses yet."
-            action={{ label: "Create your first course", href: "/studio/courses/new" }}
-          />
-        ) : (
-          <div className="mt-4 space-y-2">
-            {courses.slice(0, 5).map((course) => (
-              <Link key={course.id} href={`/studio/courses/${course.id}`} className="flex items-center justify-between rounded-lg border bg-card p-4 hover:bg-muted/50 transition-colors">
-                <div>
-                  <p className="text-sm font-medium">{course.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{course._count.chapters} chapters · {course._count.enrollments} enrolled</p>
-                </div>
-                <StatusBadge status={course.status} />
-              </Link>
+      ) : !loaded || (isRefreshing && !error) ? (
+        skeletonView
+      ) : stats ? (
+        <>
+          {isRefreshing && error && (
+            <div className="mt-6 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-2 text-xs text-destructive">
+              Couldn&apos;t refresh — {error}
+            </div>
+          )}
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {kpiCards.map((card) => (
+              <KpiCard key={card.label} {...card} />
             ))}
           </div>
-        )}
+
+          <div className="mt-6 rounded-xl border bg-card p-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-medium">Performance</h2>
+              <span className="text-xs text-muted-foreground">Revenue & enrollments</span>
+            </div>
+            <div className="mt-4">
+              <RevenueChart
+                data={stats.series}
+                bucket={bucketForRange(params.range, params.from, params.to)}
+              />
+            </div>
+          </div>
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <div className="lg:col-span-1">
+          <AttentionCard attention={stats.attention} />
+        </div>
+        <div className="lg:col-span-1">
+          <RecentActivity items={stats.activity} />
+        </div>
       </div>
+
+      <div className="mt-6 rounded-xl border bg-card p-5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium">Top Courses</h2>
+          <Link
+            href="/studio/courses"
+            className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            View all
+          </Link>
+        </div>
+        <div className="mt-2">
+          <TopCoursesTable courses={stats.topCourses} />
+        </div>
+      </div>
+    </>
+  ) : null}
     </div>
   );
 }

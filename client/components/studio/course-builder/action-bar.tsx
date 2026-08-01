@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Send, Undo2, Settings } from "lucide-react";
+import { ArrowLeft, Send, Undo2, Settings, ChartColumn } from "lucide-react";
 import { Spinner } from "@/components/shared/spinner";
 import { StatusBadge } from "@/components/shared/status-badge";
 
@@ -68,6 +68,13 @@ export function ActionBar({
                         Publish
                     </button>
                 )}
+                <Link
+                    href={`/studio/courses/${courseId}/analytics`}
+                    className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    title="Course Analytics"
+                >
+                    <ChartColumn className="size-4" />
+                </Link>
                 <Link
                     href={`/studio/courses/${courseId}/settings`}
                     className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"

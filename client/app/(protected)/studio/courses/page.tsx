@@ -14,6 +14,7 @@ import {
   BookOpen,
   Users,
   GripVertical,
+  ChartColumn,
 } from "lucide-react";
 import { StatusBadge, DraftCountBadge } from "@/components/shared/status-badge";
 
@@ -225,6 +226,13 @@ export default function StudioCoursesPage() {
                     <Pencil className="size-3" />
                     Edit
                   </Link>
+                  <Link
+                    href={`/studio/courses/${course.id}/analytics`}
+                    className="hidden sm:inline-flex size-8 items-center justify-center rounded-lg border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    title="Course analytics"
+                  >
+                    <ChartColumn className="size-3.5" />
+                  </Link>
                   <div className="relative">
                     <button
                       type="button"
@@ -249,6 +257,14 @@ export default function StudioCoursesPage() {
                           >
                             <Pencil className="size-3.5" />
                             Edit
+                          </Link>
+                          <Link
+                            href={`/studio/courses/${course.id}/analytics`}
+                            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors sm:hidden"
+                            onClick={() => setOpenMenu(null)}
+                          >
+                            <ChartColumn className="size-3.5" />
+                            Analytics
                           </Link>
                           <button
                             type="button"
