@@ -1,6 +1,16 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/app-error.js";
 
+function computeProgressPercent(
+  progress: { lessonId: string }[],
+  publishedLessons: { id: string }[],
+): number {
+  if (publishedLessons.length === 0) return 0;
+  const publishedIds = new Set(publishedLessons.map((l) => l.id));
+  const completed = progress.filter((p) => publishedIds.has(p.lessonId)).length;
+  return Math.round((completed / publishedLessons.length) * 100);
+}
+
 /* ─── Enroll ─── */
 
 export async function enrollInCourse(userId: string, courseId: string) {
@@ -74,13 +84,20 @@ export async function checkEnrollment(userId: string, courseId: string) {
     },
   });
 
-  return enrollment;
+  if (!enrollment) {
+    return null;
+  }
+
+  const publishedLessons = enrollment.course.chapters.flatMap((c) => c.lessons);
+  const progressPercent = computeProgressPercent(enrollment.progress, publishedLessons);
+
+  return { ...enrollment, progressPercent };
 }
 
 /* ─── List enrolled courses ─── */
 
 export async function listEnrolledCourses(userId: string) {
-  return prisma.enrollment.findMany({
+  const enrollments = await prisma.enrollment.findMany({
     where: { userId },
     include: {
       course: {
@@ -94,7 +111,10 @@ export async function listEnrolledCourses(userId: string) {
           instructor: { select: { id: true, name: true } },
           chapters: {
             select: {
-              lessons: { select: { id: true } },
+              lessons: {
+                where: { status: "PUBLISHED" },
+                select: { id: true },
+              },
             },
           },
         },
@@ -104,6 +124,14 @@ export async function listEnrolledCourses(userId: string) {
       },
     },
     orderBy: { enrolledAt: "desc" },
+  });
+
+  return enrollments.map((enrollment) => {
+    const publishedLessons = enrollment.course.chapters.flatMap((c) => c.lessons);
+    return {
+      ...enrollment,
+      progressPercent: computeProgressPercent(enrollment.progress, publishedLessons),
+    };
   });
 }
 
@@ -209,6 +237,7 @@ export async function markLessonComplete(
   const completedLessons = await prisma.lessonProgress.count({
     where: {
       enrollmentId: enrollment.id,
+      lesson: { status: "PUBLISHED" },
     },
   });
 
