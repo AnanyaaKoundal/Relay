@@ -14,6 +14,7 @@ import {
 } from "@/services/enrollment.service";
 import type { EnrollmentDetail } from "@/types/enrollment.types";
 import { CurriculumAccordion } from "@/components/learner/course-player/curriculum-accordion";
+import { InstructorCard } from "@/components/learner/instructor-card";
 import { Users, BookOpen, Clock, CheckCircle2, ArrowRight } from "lucide-react";
 import { Spinner } from "@/components/shared/spinner";
 
@@ -243,6 +244,14 @@ export default function CourseDetailPage() {
           }
         />
       </section>
+
+      {/* Instructor */}
+      {course.instructor && (
+        <section className="space-y-4">
+          <h2 className="text-lg font-semibold">Instructor</h2>
+          <InstructorCard name={course.instructor.name} profile={course.instructor.profile} />
+        </section>
+      )}
     </div>
   );
 }

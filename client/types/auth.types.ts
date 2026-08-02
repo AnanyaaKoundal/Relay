@@ -4,6 +4,18 @@ export type User = {
   email: string;
   isAdmin: boolean;
   isInstructor: boolean;
+  phone?: string | null;
+  createdAt?: string;
+};
+
+export type UpdateProfileInput = {
+  name: string;
+  phone?: string | null;
+};
+
+export type ChangePasswordInput = {
+  currentPassword: string;
+  newPassword: string;
 };
 
 export type AuthResponse = {
@@ -40,6 +52,7 @@ export type AuthContextType = {
   signup: (data: { name: string; email: string; password: string }) => Promise<User>;
   logout: () => void;
   upgradeToInstructor: (data: UpgradeToInstructorPayload) => Promise<User>;
+  updateUser: (user: User) => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
   isInstructor: boolean;

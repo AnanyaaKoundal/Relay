@@ -12,14 +12,15 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuGroup,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Search,
   Bell,
   BookOpen,
-  CreditCard,
-  Settings,
-  Shield,
+  Receipt,
+  UserRound,
   LogOut,
 } from "lucide-react";
 
@@ -102,35 +103,55 @@ export function LearnerNavbar() {
 
           {/* Avatar menu */}
           <DropdownMenu>
-            <DropdownMenuTrigger className="size-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground hover:bg-muted/80 transition-colors outline-none cursor-pointer">
+            <DropdownMenuTrigger className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary transition-colors outline-none hover:bg-primary/15 cursor-pointer">
               {initials}
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" sideOffset={8}>
-              <DropdownMenuLabel>
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium">{user?.name}</span>
-                  <span className="text-xs text-muted-foreground font-normal">{user?.email}</span>
-                </div>
-              </DropdownMenuLabel>
-              <div className="-mx-1 my-1 h-px bg-border" />
-              <DropdownMenuItem onClick={() => router.push("/my-courses")}>
+            <DropdownMenuContent align="end" sideOffset={8} className="w-60 p-1.5">
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="p-0">
+                  <div className="flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-2.5">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                      {initials}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground">
+                        {user?.name}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {user?.email}
+                      </p>
+                    </div>
+                  </div>
+                </DropdownMenuLabel>
+              </DropdownMenuGroup>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem
+                onClick={() => router.push("/my-courses")}
+                className="gap-2.5"
+              >
                 <BookOpen className="size-4" />
-                Your Courses
+                My Courses
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/account")}>
-                <CreditCard className="size-4" />
-                Payments
+              <DropdownMenuItem
+                onClick={() => router.push("/account/purchases")}
+                className="gap-2.5"
+              >
+                <Receipt className="size-4" />
+                My Purchases
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/account")}>
-                <Settings className="size-4" />
-                Account Settings
+              <DropdownMenuItem
+                onClick={() => router.push("/account/profile")}
+                className="gap-2.5"
+              >
+                <UserRound className="size-4" />
+                Profile Settings
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/account")}>
-                <Shield className="size-4" />
-                Security
-              </DropdownMenuItem>
-              <div className="-mx-1 my-1 h-px bg-border" />
-              <DropdownMenuItem variant="destructive" onClick={handleSignOut}>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem variant="destructive" onClick={handleSignOut} className="gap-2.5">
                 <LogOut className="size-4" />
                 Sign Out
               </DropdownMenuItem>

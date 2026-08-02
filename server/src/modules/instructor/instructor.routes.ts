@@ -1,13 +1,16 @@
 import { Router } from "express";
-import { onboard } from "./instructor.controller.js";
+import { onboard, getProfile, updateProfile } from "./instructor.controller.js";
 import { authenticate } from "../../middleware/authenticate.js";
 import couponsRoutes from "./coupons.routes.js";
 import { getCourseStats, getCoursesAnalytics, getEarningsStats, getOverviewStats } from "./stats.controller.js";
 
 const router = Router();
 
-// Instructor onboarding — the only thing this module handles
+// Instructor onboarding
 router.post("/onboard", authenticate, onboard);
+
+router.get("/profile", authenticate, getProfile);
+router.put("/profile", authenticate, updateProfile);
 
 router.use("/courses/:courseId/coupons", couponsRoutes);
 

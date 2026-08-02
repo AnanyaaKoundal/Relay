@@ -69,6 +69,31 @@ export async function login(data: { email: string; password: string }) {
   };
 }
 
+export async function updateProfile(userId: string, data: { name: string; phone?: string | null }) {
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { name: data.name, phone: data.phone ?? null },
+    select: { id: true, name: true, email: true, isAdmin: true, isInstructor: true, phone: true, createdAt: true },
+  });
+
+  return user;
+}
+
+export async function changePassword(userId: string, data: { currentPassword: string; newPassword: string }) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  const valid = await bcrypt.compare(data.currentPassword, user.passwordHash);
+  if (!valid) {
+    throw new AppError("Current password is incorrect", 400);
+  }
+
+  const passwordHash = await bcrypt.hash(data.newPassword, 10);
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+}
+
 export async function getCurrentUser(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },

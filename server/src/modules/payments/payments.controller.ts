@@ -26,6 +26,11 @@ export const getPayment = wrap(async (req: Request, res: Response) => {
   res.json(payment);
 });
 
+export const listMyPayments = wrap(async (req: Request, res: Response) => {
+  const payments = await paymentService.listMyPayments(req.user!.userId);
+  res.json({ payments });
+});
+
 export const getCountry = wrap(async (req: Request, res: Response) => {
   // The real user IP is in x-forwarded-for when behind a proxy (Render, Cloudflare, etc.)
   // It can be "203.0.113.42, 10.0.0.1" (client IP, proxy IP) — we take the first one

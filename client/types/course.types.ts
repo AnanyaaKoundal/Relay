@@ -44,6 +44,16 @@ export type Promo = {
   label: string | null;
 };
 
+export type InstructorProfilePublic = {
+  headline: string | null;
+  bio: string | null;
+  expertise: string | null;
+  twitter: string | null;
+  linkedin: string | null;
+  github: string | null;
+  website: string | null;
+};
+
 export type PublicCourse = {
   id: string;
   title: string;
@@ -56,7 +66,11 @@ export type PublicCourse = {
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
-  instructor: { id: string; name: string } | null;
+  instructor: {
+    id: string;
+    name: string;
+    profile?: InstructorProfilePublic | null;
+  } | null;
   _count: { chapters: number; enrollments: number };
   promo?: Promo | null;
 };

@@ -203,3 +203,45 @@ export async function getPayment(paymentId: string, userId: string) {
     course: payment.enrollments[0]?.course ?? null,
   };
 }
+
+export async function listMyPayments(userId: string) {
+  const payments = await prisma.payment.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    include: {
+      enrollments: {
+        include: {
+          course: { select: { id: true, title: true, thumbnailUrl: true } },
+        },
+      },
+    },
+  });
+
+  const couponIds = payments
+    .map((p) => p.couponId)
+    .filter((id): id is string => id !== null);
+  const coupons = couponIds.length
+    ? await prisma.coupon.findMany({
+        where: { id: { in: couponIds } },
+        select: { id: true, code: true },
+      })
+    : [];
+  const codeById = new Map(coupons.map((c) => [c.id, c.code]));
+
+  return payments.map((payment) => ({
+    id: payment.id,
+    subtotal: Number(payment.subtotal),
+    discountAmount: Number(payment.discountAmount),
+    taxAmount: Number(payment.taxAmount),
+    totalAmount: Number(payment.totalAmount),
+    currency: payment.currency,
+    billingCountry: payment.billingCountry,
+    gatewayTransactionId: payment.gatewayTransactionId,
+    invoiceUrl: payment.invoiceUrl,
+    gateway: payment.gateway,
+    status: payment.status,
+    createdAt: payment.createdAt,
+    couponCode: payment.couponId ? (codeById.get(payment.couponId) ?? null) : null,
+    course: payment.enrollments[0]?.course ?? null,
+  }));
+}

@@ -44,6 +44,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return res.user;
   }, []);
 
+  const updateUser = useCallback((updated: User) => {
+    setUser(updated);
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -53,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signup,
         logout,
         upgradeToInstructor,
+        updateUser,
         isAuthenticated: !!user,
         isAdmin: user?.isAdmin ?? false,
         isInstructor: user?.isInstructor ?? false,

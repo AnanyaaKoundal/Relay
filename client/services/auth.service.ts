@@ -1,4 +1,12 @@
-import type { AuthResponse, LoginInput, RegisterInput, User, UpgradeToInstructorPayload } from "@/types/auth.types";
+import type {
+  AuthResponse,
+  LoginInput,
+  RegisterInput,
+  User,
+  UpdateProfileInput,
+  ChangePasswordInput,
+  UpgradeToInstructorPayload,
+} from "@/types/auth.types";
 import { API_URL } from "@/lib/config";
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -44,6 +52,20 @@ export async function loginUser(input: LoginInput): Promise<AuthResponse> {
 
 export async function getCurrentUser(): Promise<User> {
   return request<User>("/auth/me");
+}
+
+export async function updateProfile(input: UpdateProfileInput): Promise<User> {
+  return request<User>("/auth/me", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function changePassword(input: ChangePasswordInput): Promise<{ message: string }> {
+  return request<{ message: string }>("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }
 
 export async function logoutUser(): Promise<void> {

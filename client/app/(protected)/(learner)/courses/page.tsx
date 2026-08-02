@@ -7,7 +7,8 @@ import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { browseCourses } from "@/services/course.service";
 import type { PublicCourse } from "@/types/course.types";
-import { Search, Users, Star } from "lucide-react";
+import { InstructorHoverCard } from "@/components/learner/instructor-hover-card";
+import { Search, Users } from "lucide-react";
 import { Spinner } from "@/components/shared/spinner";
 import { EmptyState } from "@/components/shared/empty-state";
 
@@ -80,7 +81,13 @@ function CourseCatalogCard({ course }: { course: PublicCourse }) {
           <h3 className="text-sm font-semibold leading-snug line-clamp-2 group-hover:text-primary transition-colors">
             {course.title}
           </h3>
-          <p className="text-xs text-muted-foreground">{course.instructor?.name ?? "Unknown instructor"}</p>
+          <p className="text-xs text-muted-foreground">
+            {course.instructor ? (
+              <InstructorHoverCard name={course.instructor.name} profile={course.instructor.profile} />
+            ) : (
+              "Unknown instructor"
+            )}
+          </p>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Users className="size-3" />

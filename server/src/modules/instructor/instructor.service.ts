@@ -12,17 +12,25 @@ export type OnboardData = {
   website?: string | null | undefined;
 };
 
-export async function onboard(userId: string, data: OnboardData) {
-  const profileData = {
+function emptyToNull(value?: string | null): string | null {
+  return value && value.trim() ? value.trim() : null;
+}
+
+function toProfileData(data: OnboardData) {
+  return {
     headline: data.headline,
-    bio: data.bio ?? null,
-    expertise: data.expertise ?? null,
-    experience: data.experience ?? null,
-    twitter: data.twitter ?? null,
-    linkedin: data.linkedin ?? null,
-    github: data.github ?? null,
-    website: data.website ?? null,
+    bio: emptyToNull(data.bio),
+    expertise: emptyToNull(data.expertise),
+    experience: emptyToNull(data.experience),
+    twitter: emptyToNull(data.twitter),
+    linkedin: emptyToNull(data.linkedin),
+    github: emptyToNull(data.github),
+    website: emptyToNull(data.website),
   };
+}
+
+export async function onboard(userId: string, data: OnboardData) {
+  const profileData = toProfileData(data);
 
   const user = await prisma.user.update({
     where: { id: userId },
@@ -46,4 +54,33 @@ export async function onboard(userId: string, data: OnboardData) {
   });
 
   return { user, token };
+}
+
+const PROFILE_SELECT = {
+  name: true,
+  email: true,
+  profile: true,
+} as const;
+
+export async function getProfile(userId: string) {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: PROFILE_SELECT,
+  });
+}
+
+export async function updateProfile(userId: string, data: OnboardData) {
+  const profileData = toProfileData(data);
+  return prisma.user.update({
+    where: { id: userId },
+    data: {
+      profile: {
+        upsert: {
+          create: profileData,
+          update: profileData,
+        },
+      },
+    },
+    select: PROFILE_SELECT,
+  });
 }

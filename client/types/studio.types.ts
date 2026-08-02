@@ -1,5 +1,23 @@
 export type StudioRange = "7d" | "30d" | "60d" | "90d" | "1y" | "custom";
 
+export type InstructorProfileData = {
+  headline: string;
+  bio: string | null;
+  expertise: string | null;
+  experience: string | null;
+  twitter: string | null;
+  linkedin: string | null;
+  github: string | null;
+  website: string | null;
+};
+
+export type InstructorProfile = {
+  name: string | null;
+  email: string | null;
+  profile: InstructorProfileData | null;
+};
+
+
 export type StudioKpi = {
   value: number;
   delta: number | null;

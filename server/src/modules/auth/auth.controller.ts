@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { registerSchema, loginSchema } from "./auth.schema.js";
+import { registerSchema, loginSchema, updateProfileSchema, changePasswordSchema } from "./auth.schema.js";
 import * as authService from "./auth.service.js";
 import { wrap } from "../../middleware/wrap.js";
 import { logger } from "../../utils/logger.js";
@@ -15,6 +15,28 @@ const COOKIE_OPTIONS = {
 export const getMe = wrap(async (req: Request, res: Response) => {
   const user = await authService.getCurrentUser(req.user!.userId);
   res.json(user);
+});
+
+export const updateMe = wrap(async (req: Request, res: Response) => {
+  const parsed = updateProfileSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Validation failed" });
+    return;
+  }
+
+  const user = await authService.updateProfile(req.user!.userId, parsed.data);
+  res.json(user);
+});
+
+export const changePassword = wrap(async (req: Request, res: Response) => {
+  const parsed = changePasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Validation failed" });
+    return;
+  }
+
+  await authService.changePassword(req.user!.userId, parsed.data);
+  res.json({ message: "Password changed successfully" });
 });
 
 export const register = wrap(async (req: Request, res: Response) => {

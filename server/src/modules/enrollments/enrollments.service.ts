@@ -123,7 +123,10 @@ export async function listEnrolledCourses(userId: string) {
         select: { lessonId: true },
       },
     },
-    orderBy: { enrolledAt: "desc" },
+    orderBy: [
+      { lastAccessedAt: { sort: "desc", nulls: "last" } },
+      { enrolledAt: "desc" },
+    ],
   });
 
   return enrollments.map((enrollment) => {
@@ -163,6 +166,13 @@ export async function getLessonContent(
 
   if (!enrollment && !lesson.isPreview) {
     throw new AppError("You must be enrolled to view this lesson", 403);
+  }
+
+  if (enrollment) {
+    await prisma.enrollment.update({
+      where: { id: enrollment.id },
+      data: { lastAccessedAt: new Date() },
+    });
   }
 
   const resolvedContentId = lesson.publishedContentId ?? lesson.contentId;
@@ -251,6 +261,7 @@ export async function markLessonComplete(
     data: {
       progressPercent,
       status: progressPercent === 100 ? "COMPLETED" : "ACTIVE",
+      lastAccessedAt: new Date(),
     },
     select: { progressPercent: true, status: true },
   });

@@ -1,5 +1,5 @@
 import { API_URL } from "@/lib/config";
-import { PaymentDetail, PurchaseRequest, PurchaseResponse, ValidateCouponResult } from "@/types/payment.types";
+import { PaymentDetail, Purchase, PurchaseRequest, PurchaseResponse, ValidateCouponResult } from "@/types/payment.types";
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   let res: Response;
@@ -40,6 +40,10 @@ export async function purchaseCourse(input: PurchaseRequest): Promise<PurchaseRe
 
 export async function getPayment(paymentId: string): Promise<PaymentDetail> {
   return request<PaymentDetail>(`/payments/${paymentId}`);
+}
+
+export async function listMyPayments(): Promise<{ payments: Purchase[] }> {
+  return request<{ payments: Purchase[] }>("/payments/me");
 }
 
 export async function validateCoupon(code: string, courseId: string, subtotal?: number): Promise<ValidateCouponResult> {

@@ -1,5 +1,7 @@
 import { API_URL } from "@/lib/config";
 import type {
+  InstructorProfile,
+  InstructorProfileData,
   StudioCourseAnalytics,
   StudioCoursesAnalytics,
   StudioEarnings,
@@ -86,4 +88,17 @@ export async function getEarningsStats(
     if (to) params.set("to", to);
   }
   return request<StudioEarnings>(`/instructor/stats/earnings?${params.toString()}`);
+}
+
+export async function getInstructorProfile(): Promise<InstructorProfile> {
+  return request<InstructorProfile>("/instructor/profile");
+}
+
+export async function updateInstructorProfile(
+  data: Partial<InstructorProfileData>,
+): Promise<InstructorProfile> {
+  return request<InstructorProfile>("/instructor/profile", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
 }

@@ -45,7 +45,21 @@ export async function browseCourses(params: {
         createdAt: true,
         updatedAt: true,
         instructor: {
-          select: { id: true, name: true },
+          select: {
+            id: true,
+            name: true,
+            profile: {
+              select: {
+                headline: true,
+                bio: true,
+                expertise: true,
+                twitter: true,
+                linkedin: true,
+                github: true,
+                website: true,
+              },
+            },
+          },
         },
         _count: { select: { chapters: true, enrollments: true } },
         coupons: {
@@ -105,7 +119,21 @@ export async function getPublicCourse(slug: string) {
     },
     include: {
       instructor: {
-        select: { id: true, name: true },
+        select: {
+          id: true,
+          name: true,
+          profile: {
+            select: {
+              headline: true,
+              bio: true,
+              expertise: true,
+              twitter: true,
+              linkedin: true,
+              github: true,
+              website: true,
+            },
+          },
+        },
       },
       chapters: {
         orderBy: { orderIndex: "asc" },

@@ -15,6 +15,7 @@ export type Enrollment = {
   progressPercent: number;
   status: "ACTIVE" | "COMPLETED";
   enrolledAt: string;
+  lastAccessedAt: string | null;
   course: EnrollmentCourse;
   progress: { lessonId: string; completedAt: string }[];
 };

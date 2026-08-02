@@ -51,3 +51,26 @@ export interface PaymentDetail {
         thumbnailUrl: string | null;
     } | null;
 }
+
+export type PaymentStatus = "PENDING" | "SUCCEEDED" | "REFUNDED" | "FAILED";
+
+export interface Purchase {
+    id: string;
+    subtotal: number;
+    discountAmount: number;
+    taxAmount: number;
+    totalAmount: number;
+    currency: string;
+    billingCountry: string;
+    gatewayTransactionId: string;
+    invoiceUrl: string | null;
+    gateway: string;
+    status: PaymentStatus;
+    createdAt: string;
+    couponCode: string | null;
+    course: {
+        id: string;
+        title: string;
+        thumbnailUrl: string | null;
+    } | null;
+}
