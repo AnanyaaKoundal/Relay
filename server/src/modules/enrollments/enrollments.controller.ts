@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import * as enrollmentService from "./enrollments.service.js";
-import { courseIdParamSchema, lessonIdParamSchema } from "./enrollments.schema.js";
+import { courseIdParamSchema, lessonIdParamSchema, submitQuizAttemptSchema } from "./enrollments.schema.js";
 import { wrap } from "../../middleware/wrap.js";
 import { logger } from "../../utils/logger.js";
 
@@ -60,6 +60,41 @@ export const markLessonComplete = wrap(async (req: Request, res: Response) => {
   }
 
   const result = await enrollmentService.markLessonComplete(
+    req.user!.userId,
+    parsed.data.lessonId,
+  );
+  res.json(result);
+});
+
+export const submitQuizAttempt = wrap(async (req: Request, res: Response) => {
+  const paramsParsed = lessonIdParamSchema.safeParse(req.params);
+  if (!paramsParsed.success) {
+    res.status(400).json({ error: paramsParsed.error.issues[0]?.message ?? "Invalid params" });
+    return;
+  }
+
+  const bodyParsed = submitQuizAttemptSchema.safeParse(req.body);
+  if (!bodyParsed.success) {
+    res.status(400).json({ error: bodyParsed.error.issues[0]?.message ?? "Validation failed" });
+    return;
+  }
+
+  const result = await enrollmentService.submitQuizAttempt(
+    req.user!.userId,
+    paramsParsed.data.lessonId,
+    bodyParsed.data.answers,
+  );
+  res.json(result);
+});
+
+export const getQuizAttempts = wrap(async (req: Request, res: Response) => {
+  const parsed = lessonIdParamSchema.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid params" });
+    return;
+  }
+
+  const result = await enrollmentService.getQuizAttempts(
     req.user!.userId,
     parsed.data.lessonId,
   );

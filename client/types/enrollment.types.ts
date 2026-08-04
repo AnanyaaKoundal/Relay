@@ -52,9 +52,9 @@ export type EnrollmentLessonContent = {
     questions?: {
       question: string;
       options: string[];
-      correctAnswer: number;
       explanation?: string;
     }[];
+    passThreshold?: number;
   } | null;
 };
 
@@ -63,4 +63,31 @@ export type CompletionResult = {
   completed: boolean;
   progressPercent: number;
   courseCompleted: boolean;
+};
+
+export type QuizAttemptResult = {
+  attemptId: string;
+  score: number;
+  total: number;
+  passed: boolean;
+  perQuestionCorrect: boolean[];
+  passThreshold: number;
+  lessonId: string;
+  completed: boolean;
+  progressPercent: number;
+  courseCompleted: boolean;
+};
+
+export type QuizAttemptSummary = {
+  id: string;
+  score: number;
+  totalQuestions: number;
+  passed: boolean;
+  createdAt: string;
+};
+
+export type QuizAttemptsResponse = {
+  attempts: QuizAttemptSummary[];
+  bestScore: number;
+  bestTotal: number;
 };

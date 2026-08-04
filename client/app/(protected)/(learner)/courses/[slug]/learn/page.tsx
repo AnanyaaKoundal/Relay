@@ -183,9 +183,31 @@ export default function LearnPage() {
                   )}
 
                 {lessonContent.contentType === "QUIZ" &&
-                  lessonContent.content?.questions && (
+                  lessonContent.content?.questions && currentLessonId && (
                     <QuizPlayer
+                      lessonId={currentLessonId}
                       questions={lessonContent.content.questions}
+                      passThreshold={lessonContent.content.passThreshold}
+                      onComplete={(progressPercent, courseCompleted) => {
+                        setEnrollment((prev) => {
+                          if (!prev) return prev;
+                          const alreadyDone = prev.progress.some(
+                            (p) => p.lessonId === currentLessonId,
+                          );
+                          const newProgress = alreadyDone
+                            ? prev.progress
+                            : [
+                                ...prev.progress,
+                                { lessonId: currentLessonId, completedAt: new Date().toISOString() },
+                              ];
+                          return {
+                            ...prev,
+                            progressPercent,
+                            status: courseCompleted ? "COMPLETED" : prev.status,
+                            progress: newProgress,
+                          };
+                        });
+                      }}
                     />
                   )}
 

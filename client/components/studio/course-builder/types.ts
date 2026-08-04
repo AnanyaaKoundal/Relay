@@ -53,8 +53,32 @@ export function mapLessonContent(
   }
   if (contentType === "QUIZ") {
     const raw = content.questions;
+    const passThreshold = (content.passThreshold as number) ?? 60;
     const questions = typeof raw === "string" ? JSON.parse(raw as string) : raw ?? [];
-    return { questions } as QuizContent;
+
+    // Convert backend format → frontend editor format
+    const converted = questions.map(
+      (q: { question: string; options: string[]; correctAnswer: number; explanation?: string }, qi: number) => {
+        const qid = `q_${qi}_${Date.now()}`;
+        const options = q.options.map((text: string, oi: number) => ({
+          id: `o_${qi}_${oi}_${Date.now()}`,
+          text,
+        }));
+        const correctOptionId =
+          q.correctAnswer >= 0 && q.correctAnswer < options.length
+            ? options[q.correctAnswer]!.id
+            : "";
+        return {
+          id: qid,
+          question: q.question,
+          options,
+          correctOptionId,
+          explanation: q.explanation ?? "",
+        };
+      }
+    );
+
+    return { questions: converted, passThreshold } as QuizContent;
   }
   return null;
 }

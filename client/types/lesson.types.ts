@@ -20,6 +20,7 @@ export type QuizQuestion = {
 };
 export type QuizContent = {
   questions: QuizQuestion[];
+  passThreshold?: number;
 };
 
 export type LessonContent = VideoContent | TextContent | QuizContent;

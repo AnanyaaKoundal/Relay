@@ -15,3 +15,7 @@ export const courseIdParamSchema = z.object({
 export const lessonIdParamSchema = z.object({
   lessonId: z.string().uuid("Invalid lesson ID"),
 });
+
+export const submitQuizAttemptSchema = z.object({
+  answers: z.array(z.number().int().min(0)).min(1, "At least one answer required"),
+});

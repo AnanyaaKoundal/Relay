@@ -31,6 +31,8 @@ import type {
   EnrollmentDetail,
   EnrollmentLessonContent,
   CompletionResult,
+  QuizAttemptResult,
+  QuizAttemptsResponse,
 } from "@/types/enrollment.types";
 
 /* ─── API ─── */
@@ -61,4 +63,18 @@ export async function markLessonComplete(lessonId: string): Promise<CompletionRe
   return request<CompletionResult>(`/enrollments/lesson/${lessonId}/complete`, {
     method: "POST",
   });
+}
+
+export async function submitQuizAttempt(
+  lessonId: string,
+  answers: number[],
+): Promise<QuizAttemptResult> {
+  return request<QuizAttemptResult>(`/enrollments/lesson/${lessonId}/quiz-attempt`, {
+    method: "POST",
+    body: JSON.stringify({ answers }),
+  });
+}
+
+export async function getQuizAttempts(lessonId: string): Promise<QuizAttemptsResponse> {
+  return request<QuizAttemptsResponse>(`/enrollments/lesson/${lessonId}/quiz-attempts`);
 }

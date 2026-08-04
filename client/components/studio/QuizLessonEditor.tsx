@@ -43,6 +43,8 @@ export function QuizLessonEditor({
 }) {
   const [title, setTitle] = useState(lessonTitle);
   const [questions, setQuestions] = useState<QuizQuestion[]>(initial.questions);
+  const [passThreshold, setPassThreshold] = useState(initial.passThreshold ?? 60);
+  const [validationError, setValidationError] = useState("");
 
   function addQuestion() {
     const newQ: QuizQuestion = {
@@ -107,9 +109,32 @@ export function QuizLessonEditor({
 
   async function handleSave() {
     if (saving) return;
+    setValidationError("");
+
+    // Validate
+    if (questions.length === 0) {
+      setValidationError("Add at least one question");
+      return;
+    }
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i]!;
+      if (!q.question.trim()) {
+        setValidationError(`Question ${i + 1} is empty`);
+        return;
+      }
+      if (q.options.length < 2) {
+        setValidationError(`Question ${i + 1} needs at least 2 options`);
+        return;
+      }
+      if (!q.correctOptionId) {
+        setValidationError(`Question ${i + 1} has no correct answer marked`);
+        return;
+      }
+    }
+
     setSaving(true);
     try {
-      await onSave({ questions }, title.trim() || lessonTitle);
+      await onSave({ questions, passThreshold }, title.trim() || lessonTitle);
       onClose();
     } finally {
       setSaving(false);
@@ -133,6 +158,10 @@ export function QuizLessonEditor({
           </div>
         ) : (
         <div className="space-y-4 py-2">
+          {validationError && (
+            <p className="text-sm text-red-500">{validationError}</p>
+          )}
+
           <div>
             <label className="text-xs font-medium text-muted-foreground">Quiz Title</label>
             <Input
@@ -141,6 +170,21 @@ export function QuizLessonEditor({
               className="mt-1.5"
               placeholder="e.g. React Hooks Quiz"
             />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Pass threshold (%)</label>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                value={passThreshold}
+                onChange={(e) => setPassThreshold(Number(e.target.value))}
+                className="mt-1.5"
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">Score needed to pass</p>
+            </div>
           </div>
 
           <div className="space-y-4">

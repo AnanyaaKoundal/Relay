@@ -192,7 +192,15 @@ export async function getLessonContent(
       where: { id: resolvedContentId },
     });
     if (raw) {
-      content = { ...raw, questions: JSON.parse(raw.questions as string) };
+      const parsed = JSON.parse(raw.questions as string);
+      // Strip correctAnswer from learner payload
+      const questions = parsed.map(
+        (q: { correctAnswer: number; rest: unknown }) => {
+          const { correctAnswer: _, ...rest } = q;
+          return rest;
+        }
+      );
+      content = { questions, passThreshold: raw.passThreshold };
     }
   }
 
@@ -271,5 +279,136 @@ export async function markLessonComplete(
     completed: true,
     progressPercent: updatedEnrollment.progressPercent,
     courseCompleted: updatedEnrollment.status === "COMPLETED",
+  };
+}
+
+/* ─── Submit quiz attempt ─── */
+
+export async function submitQuizAttempt(
+  userId: string,
+  lessonId: string,
+  answers: number[],
+) {
+  const lesson = await prisma.lesson.findUnique({
+    where: { id: lessonId },
+    include: { chapter: { select: { courseId: true } } },
+  });
+
+  if (!lesson) {
+    throw new AppError("Lesson not found", 404);
+  }
+
+  if (lesson.contentType !== "QUIZ") {
+    throw new AppError("This lesson is not a quiz", 400);
+  }
+
+  const enrollment = await prisma.enrollment.findUnique({
+    where: { userId_courseId: { userId, courseId: lesson.chapter.courseId } },
+    select: { id: true },
+  });
+
+  if (!enrollment) {
+    throw new AppError("You must be enrolled in this course", 403);
+  }
+
+  const resolvedContentId = lesson.publishedContentId ?? lesson.contentId;
+  const quizContent = await prisma.quizContent.findUnique({
+    where: { id: resolvedContentId },
+  });
+
+  if (!quizContent) {
+    throw new AppError("Quiz content not found", 404);
+  }
+
+  const questions = JSON.parse(quizContent.questions as string) as {
+    question: string;
+    options: string[];
+    correctAnswer: number;
+    explanation?: string;
+  }[];
+
+  if (answers.length !== questions.length) {
+    throw new AppError(
+      `Expected ${questions.length} answers, got ${answers.length}`,
+      400,
+    );
+  }
+
+  let correct = 0;
+  const perQuestionCorrect: boolean[] = [];
+  for (let i = 0; i < questions.length; i++) {
+    const isCorrect = answers[i] === questions[i]!.correctAnswer;
+    perQuestionCorrect.push(isCorrect);
+    if (isCorrect) correct++;
+  }
+
+  const total = questions.length;
+  const passed = total > 0 && Math.round((correct / total) * 100) >= quizContent.passThreshold;
+
+  const attempt = await prisma.quizAttempt.create({
+    data: {
+      userId,
+      lessonId,
+      score: correct,
+      totalQuestions: total,
+      passed,
+      answers,
+    },
+  });
+
+  // Mark lesson complete on any submission (soft gate)
+  const result = await markLessonComplete(userId, lessonId);
+
+  return {
+    attemptId: attempt.id,
+    score: correct,
+    total,
+    passed,
+    perQuestionCorrect,
+    passThreshold: quizContent.passThreshold,
+    ...result,
+  };
+}
+
+/* ─── Get quiz attempts ─── */
+
+export async function getQuizAttempts(userId: string, lessonId: string) {
+  const lesson = await prisma.lesson.findUnique({
+    where: { id: lessonId },
+    include: { chapter: { select: { courseId: true } } },
+  });
+
+  if (!lesson) {
+    throw new AppError("Lesson not found", 404);
+  }
+
+  const enrollment = await prisma.enrollment.findUnique({
+    where: { userId_courseId: { userId, courseId: lesson.chapter.courseId } },
+    select: { id: true },
+  });
+
+  if (!enrollment) {
+    throw new AppError("You must be enrolled in this course", 403);
+  }
+
+  const attempts = await prisma.quizAttempt.findMany({
+    where: { userId, lessonId },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      score: true,
+      totalQuestions: true,
+      passed: true,
+      createdAt: true,
+    },
+  });
+
+  const bestScore = attempts.reduce((max, a) => Math.max(max, a.score), 0);
+  const bestTotal = attempts.length > 0 ? attempts[0]!.totalQuestions : 0;
+
+  return {
+    attempts,
+    bestScore,
+    bestTotal,
   };
 }
