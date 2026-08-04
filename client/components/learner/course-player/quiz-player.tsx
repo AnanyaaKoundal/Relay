@@ -163,9 +163,15 @@ export function QuizPlayer({ lessonId, questions, passThreshold = 60, onComplete
             </div>
 
             {/* Explanation after submission */}
-            {result && q.explanation && (
+            {result && (
               <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
-                <span className="font-medium">Explanation:</span> {q.explanation}
+                {q.explanation ? (
+                  <>
+                    <span className="font-medium">Explanation:</span> {q.explanation}
+                  </>
+                ) : (
+                  <span className="text-muted-foreground/60">No explanation provided.</span>
+                )}
               </div>
             )}
           </div>

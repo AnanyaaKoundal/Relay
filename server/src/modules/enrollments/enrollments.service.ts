@@ -356,8 +356,23 @@ export async function submitQuizAttempt(
     },
   });
 
-  // Mark lesson complete on any submission (soft gate)
-  const result = await markLessonComplete(userId, lessonId);
+  // Mark lesson complete only on pass
+  let result;
+  if (passed) {
+    result = await markLessonComplete(userId, lessonId);
+  } else {
+    // Still return progress info for failed attempts
+    const enrollment = await prisma.enrollment.findUnique({
+      where: { userId_courseId: { userId, courseId: lesson.chapter.courseId } },
+      select: { progressPercent: true, status: true },
+    });
+    result = {
+      lessonId,
+      completed: false,
+      progressPercent: enrollment?.progressPercent ?? 0,
+      courseCompleted: enrollment?.status === "COMPLETED",
+    };
+  }
 
   return {
     attemptId: attempt.id,

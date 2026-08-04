@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +44,27 @@ export function QuizLessonEditor({
   const [title, setTitle] = useState(lessonTitle);
   const [questions, setQuestions] = useState<QuizQuestion[]>(initial.questions);
   const [passThreshold, setPassThreshold] = useState(initial.passThreshold ?? 60);
+
+  useEffect(() => {
+    const q = initial.questions;
+    if (q.length > 0 && typeof q[0] === "object" && "correctAnswer" in q[0] && !("correctOptionId" in q[0])) {
+      setQuestions(q.map((raw, qi) => {
+        const backend = raw as unknown as { question: string; options: string[]; correctAnswer: number; explanation?: string };
+        const opts = backend.options.map((text, oi) => ({ id: `o_${qi}_${oi}`, text }));
+        return {
+          id: `q_${qi}`,
+          question: backend.question,
+          options: opts,
+          correctOptionId: opts[backend.correctAnswer]?.id ?? "",
+          explanation: backend.explanation ?? "",
+        };
+      }));
+    } else {
+      setQuestions(q);
+    }
+    setPassThreshold(initial.passThreshold ?? 60);
+    setTitle(lessonTitle);
+  }, [initial, lessonTitle]);
   const [validationError, setValidationError] = useState("");
 
   function addQuestion() {

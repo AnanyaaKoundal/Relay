@@ -144,6 +144,9 @@ export function useLessonManager({
                 setEditorLesson({ chapterId, lessonId: savedId });
             } else {
                 // Existing lesson: update in chapters
+                // If lesson is PUBLISHED, server will revert to DRAFT after snapshot
+                const allLessonsFlat = chapters.flatMap((ch) => ch.lessons);
+                const isPublished = allLessonsFlat.find((l) => l.id === lessonId)?.status === "PUBLISHED";
                 setChapters((prev) =>
                     prev.map((c) =>
                         c.id === chapterId
@@ -155,6 +158,7 @@ export function useLessonManager({
                                             ...l,
                                             title: newTitle,
                                             content: data,
+                                            status: isPublished ? "DRAFT" as const : l.status,
                                             durationSeconds:
                                                 type === "VIDEO" ? (data as VideoContent).durationSeconds : l.durationSeconds,
                                             processingStatus: type === "VIDEO" ? "PROCESSING" : l.processingStatus,

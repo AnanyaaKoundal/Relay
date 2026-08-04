@@ -9,6 +9,7 @@ type CourseNavBarProps = {
   courseSlug: string;
   progressPercent: number;
   isCompleting: boolean;
+  isCompleted: boolean;
   onMarkComplete: () => void;
 };
 
@@ -17,6 +18,7 @@ export function CourseNavBar({
   courseSlug,
   progressPercent,
   isCompleting,
+  isCompleted,
   onMarkComplete,
 }: CourseNavBarProps) {
   return (
@@ -50,15 +52,19 @@ export function CourseNavBar({
         <button
           type="button"
           onClick={onMarkComplete}
-          disabled={isCompleting}
-          className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+          disabled={isCompleting || isCompleted}
+          className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-medium transition-colors disabled:opacity-50 ${
+            isCompleted
+              ? "bg-emerald-100 text-emerald-700 cursor-default"
+              : "bg-primary text-primary-foreground hover:bg-primary/90"
+          }`}
         >
           {isCompleting ? (
             <Spinner size="3.5" />
           ) : (
             <CheckCircle2 className="size-3.5" />
           )}
-          Mark Complete
+          {isCompleted ? "Completed" : "Mark Complete"}
         </button>
       </div>
     </header>

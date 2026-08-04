@@ -145,6 +145,7 @@ export default function LearnPage() {
           courseSlug={slug}
           progressPercent={enrollment.progressPercent}
           isCompleting={completing}
+          isCompleted={currentLessonId ? completedLessonIds.has(currentLessonId) : false}
           onMarkComplete={handleMarkComplete}
         />
 
