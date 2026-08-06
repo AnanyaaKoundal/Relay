@@ -72,6 +72,8 @@ export async function checkEnrollment(userId: string, courseId: string) {
                   durationSeconds: true,
                   orderIndex: true,
                   isPreview: true,
+                  createdAt: true,
+                  updatedAt: true,
                 },
               },
             },
@@ -210,6 +212,8 @@ export async function getLessonContent(
     contentType: lesson.contentType,
     durationSeconds: lesson.durationSeconds,
     isPreview: lesson.isPreview,
+    createdAt: lesson.createdAt,
+    updatedAt: lesson.updatedAt,
     content,
   };
 }
@@ -264,11 +268,14 @@ export async function markLessonComplete(
       ? Math.round((completedLessons / totalLessons) * 100)
       : 0;
 
+  const justCompleted = progressPercent === 100 && enrollment.status !== "COMPLETED";
+
   const updatedEnrollment = await prisma.enrollment.update({
     where: { id: enrollment.id },
     data: {
       progressPercent,
       status: progressPercent === 100 ? "COMPLETED" : "ACTIVE",
+      ...(justCompleted && { completedAt: new Date() }),
       lastAccessedAt: new Date(),
     },
     select: { progressPercent: true, status: true },
@@ -426,4 +433,38 @@ export async function getQuizAttempts(userId: string, lessonId: string) {
     bestScore,
     bestTotal,
   };
+}
+
+/* ─── Recalculate progress for all enrollments in a course ─── */
+
+export async function recalculateEnrollmentProgress(courseId: string) {
+  const totalLessons = await prisma.lesson.count({
+    where: { chapter: { courseId }, status: "PUBLISHED" },
+  });
+
+  const enrollments = await prisma.enrollment.findMany({
+    where: { courseId },
+    select: { id: true, status: true },
+  });
+
+  for (const enrollment of enrollments) {
+    const completedLessons = await prisma.lessonProgress.count({
+      where: { enrollmentId: enrollment.id, lesson: { status: "PUBLISHED" } },
+    });
+
+    const progressPercent =
+      totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+
+    const newStatus = progressPercent === 100 ? "COMPLETED" : "ACTIVE";
+    const justCompleted = newStatus === "COMPLETED" && enrollment.status !== "COMPLETED";
+
+    await prisma.enrollment.update({
+      where: { id: enrollment.id },
+      data: {
+        progressPercent,
+        status: newStatus,
+        ...(justCompleted && { completedAt: new Date() }),
+      },
+    });
+  }
 }

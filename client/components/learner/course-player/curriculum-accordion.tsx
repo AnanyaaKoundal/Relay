@@ -13,6 +13,7 @@ import {
   Eye,
   Lock,
 } from "lucide-react";
+import { NewBadge, UpdatedBadge } from "./lesson-badges";
 
 type Lesson = {
   id: string;
@@ -20,6 +21,8 @@ type Lesson = {
   contentType: string;
   durationSeconds: number | null;
   isPreview?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type Chapter = {
@@ -32,6 +35,9 @@ type Chapter = {
 type CurriculumAccordionProps = {
   chapters: Chapter[];
   completedLessonIds?: Set<string>;
+  enrolledAt?: string;
+  enrollmentCompletedAt?: string | null;
+  lessonCompletedDates?: Map<string, string>;
 };
 
 function contentTypeIcon(type: string) {
@@ -50,6 +56,9 @@ function contentTypeIcon(type: string) {
 export function CurriculumAccordion({
   chapters,
   completedLessonIds,
+  enrolledAt,
+  enrollmentCompletedAt,
+  lessonCompletedDates,
 }: CurriculumAccordionProps) {
   const [openChapters, setOpenChapters] = useState<Set<string>>(
     new Set(chapters.map((ch) => ch.id)),
@@ -144,6 +153,12 @@ export function CurriculumAccordion({
                       <span className={`flex-1 ${isCompleted ? "text-green-600 dark:text-green-400" : ""}`}>
                         {lesson.title}
                       </span>
+                      {!isCompleted && (enrollmentCompletedAt ?? enrolledAt) && lesson.createdAt && lesson.createdAt > (enrollmentCompletedAt ?? enrolledAt)! && (
+                        <NewBadge />
+                      )}
+                      {isCompleted && lessonCompletedDates && lesson.updatedAt && lessonCompletedDates.get(lesson.id) && lesson.updatedAt > lessonCompletedDates.get(lesson.id)! && (
+                        <UpdatedBadge />
+                      )}
                       {lesson.isPreview && (
                         <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
                           <Eye className="size-2.5" />

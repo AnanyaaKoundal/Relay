@@ -242,6 +242,13 @@ export default function CourseDetailPage() {
               ? new Set(enrollment.progress.map((p) => p.lessonId))
               : undefined
           }
+          enrolledAt={enrollment?.enrolledAt}
+          enrollmentCompletedAt={enrollment?.completedAt}
+          lessonCompletedDates={
+            enrollment
+              ? new Map(enrollment.progress.map((p) => [p.lessonId, p.completedAt]))
+              : undefined
+          }
         />
       </section>
 

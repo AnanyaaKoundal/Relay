@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/app-error.js";
 import { assertChapterOwnership, assertLessonOwnership } from "../../lib/ownership.js";
+import { recalculateEnrollmentProgress } from "../enrollments/enrollments.service.js";
 
 /* ─── Helpers ─── */
 
@@ -273,12 +274,21 @@ export async function updateLesson(
 export async function deleteLesson(instructorId: string, lessonId: string) {
   const lesson = await assertLessonOwnership(instructorId, lessonId);
 
+  const chapter = await prisma.chapter.findUnique({
+    where: { id: lesson.chapterId },
+    select: { courseId: true },
+  });
+
   await deleteContentRecord(lesson.contentId, lesson.contentType);
   if (lesson.publishedContentId) {
     await deleteContentRecord(lesson.publishedContentId, lesson.contentType);
   }
 
   await prisma.lesson.delete({ where: { id: lessonId } });
+
+  if (chapter) {
+    await recalculateEnrollmentProgress(chapter.courseId);
+  }
 }
 
 export async function reorderLessons(
@@ -349,7 +359,7 @@ export async function publishLessons(instructorId: string, lessonIds: string[]) 
   for (const chapterId of chapterIdsToPublish) {
     const chapter = await prisma.chapter.findUnique({
       where: { id: chapterId },
-      select: { id: true, titleDraft: true },
+      select: { id: true, titleDraft: true, courseId: true },
     });
     if (chapter?.titleDraft) {
       await prisma.chapter.update({
@@ -357,6 +367,16 @@ export async function publishLessons(instructorId: string, lessonIds: string[]) 
         data: { title: chapter.titleDraft, titleDraft: null },
       });
     }
+  }
+
+  /* ── Recalculate enrollment progress for affected courses ── */
+  const courseIds = new Set<string>();
+  for (const chapterId of chapterIdsToPublish) {
+    const ch = await prisma.chapter.findUnique({ where: { id: chapterId }, select: { courseId: true } });
+    if (ch) courseIds.add(ch.courseId);
+  }
+  for (const cid of courseIds) {
+    await recalculateEnrollmentProgress(cid);
   }
 
   return { published: updated };
@@ -377,6 +397,16 @@ export async function unpublishLessons(instructorId: string, lessonIds: string[]
     });
 
     updated.push(lessonId);
+  }
+
+  /* ── Recalculate enrollment progress for affected courses ── */
+  const courseIds = new Set<string>();
+  for (const lessonId of updated) {
+    const l = await prisma.lesson.findUnique({ where: { id: lessonId }, select: { chapter: { select: { courseId: true } } } });
+    if (l) courseIds.add(l.chapter.courseId);
+  }
+  for (const cid of courseIds) {
+    await recalculateEnrollmentProgress(cid);
   }
 
   return { unpublished: updated };

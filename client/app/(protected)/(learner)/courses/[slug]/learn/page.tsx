@@ -73,6 +73,10 @@ export default function LearnPage() {
     ? new Set(enrollment.progress.map((p) => p.lessonId))
     : new Set<string>();
 
+  const lessonCompletedDates: Map<string, string> = enrollment
+    ? new Map(enrollment.progress.map((p) => [p.lessonId, p.completedAt]))
+    : new Map();
+
   const handleMarkComplete = useCallback(async () => {
     if (!currentLessonId || completing) return;
     setCompleting(true);
@@ -94,6 +98,7 @@ export default function LearnPage() {
           ...prev,
           progressPercent: result.progressPercent,
           status: result.courseCompleted ? "COMPLETED" : prev.status,
+          ...(result.courseCompleted && !prev.completedAt && { completedAt: new Date().toISOString() }),
           progress: newProgress,
         };
       });
@@ -133,6 +138,9 @@ export default function LearnPage() {
             chapters={enrollment.course.chapters}
             currentLessonId={currentLessonId ?? ""}
             completedLessonIds={completedLessonIds}
+            enrolledAt={enrollment.enrolledAt}
+            enrollmentCompletedAt={enrollment.completedAt}
+            lessonCompletedDates={lessonCompletedDates}
             onSelectLesson={setCurrentLessonId}
           />
         </div>
@@ -205,6 +213,7 @@ export default function LearnPage() {
                             ...prev,
                             progressPercent,
                             status: courseCompleted ? "COMPLETED" : prev.status,
+                            ...(courseCompleted && !prev.completedAt && { completedAt: new Date().toISOString() }),
                             progress: newProgress,
                           };
                         });

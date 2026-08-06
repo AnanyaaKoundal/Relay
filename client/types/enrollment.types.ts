@@ -15,6 +15,7 @@ export type Enrollment = {
   progressPercent: number;
   status: "ACTIVE" | "COMPLETED";
   enrolledAt: string;
+  completedAt: string | null;
   lastAccessedAt: string | null;
   course: EnrollmentCourse;
   progress: { lessonId: string; completedAt: string }[];
@@ -44,6 +45,8 @@ export type EnrollmentLessonContent = {
   contentType: "VIDEO" | "TEXT" | "QUIZ";
   durationSeconds: number | null;
   isPreview: boolean;
+  createdAt: string;
+  updatedAt: string;
   content: {
     videoUrl?: string;
     hlsUrl?: string;

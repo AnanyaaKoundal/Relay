@@ -2,12 +2,15 @@
 
 import { CheckCircle2, Circle, PlayCircle } from "lucide-react";
 import { formatDuration } from "@/lib/utils";
+import { NewBadge, UpdatedBadge } from "./lesson-badges";
 
 type Lesson = {
   id: string;
   title: string;
   contentType: string;
   durationSeconds: number | null;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type Chapter = {
@@ -21,6 +24,9 @@ type ChapterSidebarProps = {
   chapters: Chapter[];
   currentLessonId: string;
   completedLessonIds: Set<string>;
+  enrolledAt?: string;
+  enrollmentCompletedAt?: string | null;
+  lessonCompletedDates?: Map<string, string>;
   onSelectLesson: (lessonId: string) => void;
 };
 
@@ -35,6 +41,9 @@ export function ChapterSidebar({
   chapters,
   currentLessonId,
   completedLessonIds,
+  enrolledAt,
+  enrollmentCompletedAt,
+  lessonCompletedDates,
   onSelectLesson,
 }: ChapterSidebarProps) {
   return (
@@ -68,6 +77,12 @@ export function ChapterSidebar({
                       <Circle className="size-4 shrink-0" />
                     )}
                     <span className="truncate flex-1">{lesson.title}</span>
+                    {!isCompleted && (enrollmentCompletedAt ?? enrolledAt) && lesson.createdAt && lesson.createdAt > (enrollmentCompletedAt ?? enrolledAt)! && (
+                      <NewBadge />
+                    )}
+                    {isCompleted && lessonCompletedDates && lesson.updatedAt && lessonCompletedDates.get(lesson.id) && lesson.updatedAt > lessonCompletedDates.get(lesson.id)! && (
+                      <UpdatedBadge />
+                    )}
                     <span className="text-xs shrink-0">
                       {contentTypeIcon(lesson.contentType)}
                     </span>

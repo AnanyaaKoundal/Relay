@@ -125,6 +125,7 @@ model Enrollment {
   progressPercent Int              @default(0) @map("progress_percent")
   status          EnrollmentStatus @default(ACTIVE)
   enrolledAt      DateTime         @default(now()) @map("enrolled_at")
+  completedAt     DateTime?        @map("completed_at")
   lastAccessedAt  DateTime?        @map("last_accessed_at")
   course          Course           @relation(fields: [courseId], references: [id])
   payment         Payment?         @relation(fields: [paymentId], references: [id])
