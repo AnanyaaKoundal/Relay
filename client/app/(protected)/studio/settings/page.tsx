@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Save, Check } from "lucide-react";
 import { Spinner } from "@/components/shared/spinner";
 import { InstructorPreview } from "@/components/studio/settings/instructor-preview";
+import { Textarea } from "@/components/ui/textarea";
 import * as studioApi from "@/services/studio.service";
 import type { InstructorProfile } from "@/types/studio.types";
 
@@ -136,13 +137,13 @@ export default function StudioSettingsPage() {
             <label htmlFor="p-bio" className="text-xs font-medium text-muted-foreground">
               Bio
             </label>
-            <textarea
+            <Textarea
               id="p-bio"
               rows={4}
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               placeholder="Tell students about yourself, your teaching style, and your experience..."
-              className="mt-1 block w-full resize-none rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+              className="mt-1 resize-none"
             />
             <p className="mt-1 text-[11px] text-muted-foreground">{bio.length}/500</p>
           </div>
@@ -164,13 +165,13 @@ export default function StudioSettingsPage() {
             <label htmlFor="p-experience" className="text-xs font-medium text-muted-foreground">
               Experience
             </label>
-            <textarea
+            <Textarea
               id="p-experience"
               rows={3}
               value={experience}
               onChange={(e) => setExperience(e.target.value)}
               placeholder="e.g. 5 years building production apps..."
-              className="mt-1 block w-full resize-none rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+              className="mt-1 resize-none"
             />
           </div>
 

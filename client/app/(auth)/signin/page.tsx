@@ -30,8 +30,8 @@ export default function SignInPage() {
 
     setLoading(true);
     try {
-      await login(parsed.data);
-      router.push("/home");
+      const result = await login(parsed.data);
+      router.push(result.isAdmin ? "/admin" : "/home");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid email or password");
     } finally {

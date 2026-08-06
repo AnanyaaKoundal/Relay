@@ -17,6 +17,7 @@ model User {
   updatedAt      DateTime           @updatedAt @map("updated_at")
   isAdmin        Boolean            @default(false) @map("is_admin")
   isInstructor   Boolean            @default(false) @map("is_instructor")
+  status         UserStatus         @default(ACTIVE)
   courses        Course[]
   enrollments    Enrollment[]
   profile        InstructorProfile?
@@ -25,8 +26,20 @@ model User {
   payments       Payment[]
   questions      Question[]
   quizAttempts   QuizAttempt[]
+  balance        InstructorBalance?
+  payouts        Payout[]
 
   @@map("users")
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  courses   Course[]
+
+  @@map("categories")
 }
 
 model Course {
@@ -34,7 +47,7 @@ model Course {
   title        String
   description  String
   thumbnailUrl String?      @map("thumbnail_url")
-  category     String?
+  categoryId   String?      @map("category_id")
   price        Decimal      @default(0)
   difficulty   Difficulty?  @default(BEGINNER)
   status       CourseStatus @default(DRAFT)
@@ -44,6 +57,7 @@ model Course {
   publishedAt  DateTime?    @map("published_at")
   chapters     Chapter[]
   coupons      Coupon[]
+  category     Category?    @relation(fields: [categoryId], references: [id])
   instructor   User         @relation(fields: [instructorId], references: [id])
   enrollments  Enrollment[]
 
@@ -257,11 +271,42 @@ model Coupon {
   @@map("coupons")
 }
 
+model InstructorBalance {
+  id             String   @id @default(uuid())
+  userId         String   @unique @map("user_id")
+  pendingBalance Decimal  @default(0) @map("pending_balance")
+  totalEarned    Decimal  @default(0) @map("total_earned")
+  lastPayoutAt   DateTime? @map("last_payout_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  user           User     @relation(fields: [userId], references: [id])
+
+  @@map("instructor_balances")
+}
+
+model Payout {
+  id             String       @id @default(uuid())
+  instructorId   String       @map("instructor_id")
+  amount         Decimal
+  status         PayoutStatus @default(PENDING)
+  bankDetails    Json?        @map("bank_details")
+  notes          String?
+  createdAt      DateTime     @default(now()) @map("created_at")
+  processedAt    DateTime?    @map("processed_at")
+  instructor     User         @relation(fields: [instructorId], references: [id])
+
+  @@index([instructorId, status])
+  @@map("payouts")
+}
+
+enum UserStatus {
+  ACTIVE
+  BANNED
+}
+
 enum CourseStatus {
   DRAFT
-  PENDING_APPROVAL
   PUBLISHED
-  REJECTED
 }
 
 enum ContentType {
@@ -297,4 +342,10 @@ enum PaymentGateway {
   STRIPE
   RAZORPAY
   MOCK
+}
+
+enum PayoutStatus {
+  PENDING
+  COMPLETED
+  FAILED
 }

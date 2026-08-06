@@ -19,7 +19,7 @@ export async function browseCourses(params: {
       { description: { contains: params.search, mode: "insensitive" } },
     ];
   }
-  if (params.category) where.category = params.category;
+  if (params.category) where.categoryId = params.category;
   if (params.difficulty) where.difficulty = params.difficulty;
   if (params.free === true) where.price = 0;
   if (params.free === false) where.price = { gt: 0 };
@@ -235,7 +235,7 @@ export async function createCourse(
   data: {
     title: string;
     description: string;
-    category?: string;
+    categoryId?: string | null;
     difficulty?: string;
     price?: number;
   },
@@ -244,7 +244,7 @@ export async function createCourse(
     data: {
       title: data.title,
       description: data.description,
-      category: data.category ?? null,
+      categoryId: data.categoryId ?? null,
       difficulty: (data.difficulty as any) ?? "BEGINNER",
       price: data.price ?? 0,
       instructorId,
@@ -258,7 +258,7 @@ export async function updateCourse(
   data: {
     title?: string;
     description?: string;
-    category?: string;
+    categoryId?: string | null;
     difficulty?: string;
     price?: number;
     status?: string;

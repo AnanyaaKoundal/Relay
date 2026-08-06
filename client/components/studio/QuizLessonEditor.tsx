@@ -8,6 +8,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -274,11 +275,11 @@ export function QuizLessonEditor({
 
                 <div className="ml-8">
                   <label className="text-xs text-muted-foreground">Explanation (shown after answer)</label>
-                  <textarea
+                  <Textarea
                     value={q.explanation}
                     onChange={(e) => updateQuestion(q.id, { explanation: e.target.value })}
                     rows={2}
-                    className="mt-1 block w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary resize-none"
+                    className="mt-1 resize-none"
                     placeholder="Explain the correct answer..."
                   />
                 </div>

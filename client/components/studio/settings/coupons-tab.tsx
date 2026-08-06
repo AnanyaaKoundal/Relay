@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import * as couponApi from "@/services/coupon.service";
 import type { Coupon, CreateCouponInput } from "@/types/coupon.types";
 import { Spinner } from "@/components/shared/spinner";
+import { FilterSelect } from "@/components/shared/filter-select";
 import { Plus, Trash2, Pencil, X, Check } from "lucide-react";
 
 interface Props {
@@ -167,14 +168,16 @@ export function CouponsTab({ courseId }: Props) {
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Type</label>
-              <select
+              <FilterSelect
                 value={type}
-                onChange={(e) => setType(e.target.value as "PERCENTAGE" | "FIXED")}
-                className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="PERCENTAGE">Percentage (%)</option>
-                <option value="FIXED">Fixed (₹)</option>
-              </select>
+                placeholder="Select type"
+                onChange={(v) => setType(v as "PERCENTAGE" | "FIXED")}
+                options={[
+                  { label: "Percentage (%)", value: "PERCENTAGE" },
+                  { label: "Fixed (₹)", value: "FIXED" },
+                ]}
+                className="mt-1"
+              />
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Value</label>

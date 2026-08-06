@@ -3,12 +3,15 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createCourse } from "@/services/course.service";
+import { Textarea } from "@/components/ui/textarea";
+import { FilterSelect } from "@/components/shared/filter-select";
 
 export default function StudioNewCoursePage() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
+  const [difficulty, setDifficulty] = useState("BEGINNER");
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -27,7 +30,7 @@ export default function StudioNewCoursePage() {
       title: (form.get("title") as string).trim(),
       description: (form.get("description") as string).trim(),
       category: (form.get("category") as string).trim() || undefined,
-      difficulty: (form.get("difficulty") as string) || undefined,
+      difficulty: difficulty || undefined,
       price: isPaid ? Number(form.get("price")) : 0,
     };
 
@@ -58,7 +61,7 @@ export default function StudioNewCoursePage() {
         </div>
         <div>
           <label htmlFor="short" className="text-sm font-medium">Short Description <span className="text-red-500">*</span></label>
-          <textarea id="short" name="description" rows={3} required maxLength={5000} placeholder="What will students learn?" className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" />
+          <Textarea id="short" name="description" rows={3} required maxLength={5000} placeholder="What will students learn?" className="mt-1" />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -66,26 +69,35 @@ export default function StudioNewCoursePage() {
             <input id="category" name="category" placeholder="e.g. Web Development" className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" />
           </div>
           <div>
-            <label htmlFor="difficulty" className="text-sm font-medium">Difficulty</label>
-            <select id="difficulty" name="difficulty" className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary">
-              <option value="BEGINNER">Beginner</option>
-              <option value="INTERMEDIATE">Intermediate</option>
-              <option value="ADVANCED">Advanced</option>
-            </select>
+            <label className="text-sm font-medium">Difficulty</label>
+            <input type="hidden" name="difficulty" value={difficulty} />
+            <FilterSelect
+              value={difficulty}
+              placeholder="Select difficulty"
+              onChange={setDifficulty}
+              options={[
+                { label: "Beginner", value: "BEGINNER" },
+                { label: "Intermediate", value: "INTERMEDIATE" },
+                { label: "Advanced", value: "ADVANCED" },
+              ]}
+              className="mt-1"
+            />
           </div>
           <div>
             <label className="text-sm font-medium">Free or Paid</label>
-            <select
-              className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+            <FilterSelect
               value={isPaid ? "paid" : "free"}
-              onChange={(e) => setIsPaid(e.target.value === "paid")}
-            >
-              <option value="free">Free</option>
-              <option value="paid">Paid</option>
-            </select>
+              placeholder="Select type"
+              onChange={(v) => setIsPaid(v === "paid")}
+              options={[
+                { label: "Free", value: "free" },
+                { label: "Paid", value: "paid" },
+              ]}
+              className="mt-1"
+            />
           </div>
           <div>
-            <label htmlFor="price" className="text-sm font-medium">Price ($)</label>
+            <label htmlFor="price" className="text-sm font-medium">Price (₹)</label>
             <input
               id="price"
               name="price"

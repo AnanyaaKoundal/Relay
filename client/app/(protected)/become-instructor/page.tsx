@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function BecomeInstructorPage() {
   const router = useRouter();
@@ -55,7 +56,7 @@ export default function BecomeInstructorPage() {
         </div>
         <div>
           <label htmlFor="bio" className="text-sm font-medium">Short Bio</label>
-          <textarea id="bio" name="bio" rows={3} placeholder="Tell learners about yourself..." className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" />
+          <Textarea id="bio" name="bio" rows={3} placeholder="Tell learners about yourself..." className="mt-1" />
         </div>
         <div>
           <label htmlFor="expertise" className="text-sm font-medium">Primary Expertise</label>

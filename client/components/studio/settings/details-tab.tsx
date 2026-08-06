@@ -1,5 +1,8 @@
 "use client";
 
+import { Textarea } from "@/components/ui/textarea";
+import { FilterSelect } from "@/components/shared/filter-select";
+
 interface Props {
   title: string;
   setTitle: (v: string) => void;
@@ -34,12 +37,12 @@ export function DetailsTab({
 
       <div>
         <label htmlFor="s-desc" className="text-xs font-medium text-muted-foreground">Description</label>
-        <textarea
+        <Textarea
           id="s-desc"
           rows={4}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary resize-none"
+          className="mt-1 resize-none"
         />
       </div>
 
@@ -56,16 +59,17 @@ export function DetailsTab({
         </div>
         <div>
           <label htmlFor="s-difficulty" className="text-xs font-medium text-muted-foreground">Difficulty</label>
-          <select
-            id="s-difficulty"
+          <FilterSelect
             value={difficulty}
-            onChange={(e) => setDifficulty(e.target.value)}
-            className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="BEGINNER">Beginner</option>
-            <option value="INTERMEDIATE">Intermediate</option>
-            <option value="ADVANCED">Advanced</option>
-          </select>
+            placeholder="Select difficulty"
+            onChange={setDifficulty}
+            options={[
+              { label: "Beginner", value: "BEGINNER" },
+              { label: "Intermediate", value: "INTERMEDIATE" },
+              { label: "Advanced", value: "ADVANCED" },
+            ]}
+            className="mt-1"
+          />
         </div>
       </div>
 

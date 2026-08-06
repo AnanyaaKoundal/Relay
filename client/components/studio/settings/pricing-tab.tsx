@@ -1,5 +1,7 @@
 "use client";
 
+import { FilterSelect } from "@/components/shared/filter-select";
+
 interface Props {
   isPaid: boolean;
   setIsPaid: (v: boolean) => void;
@@ -12,17 +14,19 @@ export function PricingTab({ isPaid, setIsPaid, price, setPrice }: Props) {
     <div className="grid gap-4 sm:grid-cols-2">
       <div>
         <label className="text-xs font-medium text-muted-foreground">Type</label>
-        <select
-          className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+        <FilterSelect
           value={isPaid ? "paid" : "free"}
-          onChange={(e) => {
-            setIsPaid(e.target.value === "paid");
-            if (e.target.value === "free") setPrice("");
+          placeholder="Select type"
+          onChange={(v) => {
+            setIsPaid(v === "paid");
+            if (v === "free") setPrice("");
           }}
-        >
-          <option value="free">Free</option>
-          <option value="paid">Paid</option>
-        </select>
+          options={[
+            { label: "Free", value: "free" },
+            { label: "Paid", value: "paid" },
+          ]}
+          className="mt-1"
+        />
       </div>
       <div>
         <label htmlFor="s-price" className="text-xs font-medium text-muted-foreground">Price (₹)</label>

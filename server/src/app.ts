@@ -11,6 +11,7 @@ import lessonsRoutes from "./modules/lessons/lessons.routes.js";
 import enrollmentsRoutes from "./modules/enrollments/enrollments.routes.js";
 import paymentsRoutes from "./modules/payments/payments.routes.js";
 import uploadsRoutes from "./modules/uploads/uploads.routes.js";
+import adminRoutes from "./modules/admin/admin.routes.js";
 import { requestLogger } from "./middleware/request-logger.js";
 import { errorHandler } from "./middleware/error-handler.js";
 
@@ -54,6 +55,7 @@ app.use("/lessons", lessonsRoutes);              // lesson management (instructo
 app.use("/enrollments", enrollmentsRoutes);      // enrollment + lesson content + progress
 app.use("/payments", paymentsRoutes);            // purchase + payment history
 app.use("/uploads", uploadsRoutes);              // presigned URLs for file uploads
+app.use("/admin", adminRoutes);                  // admin panel
 
 app.use(errorHandler);
 
