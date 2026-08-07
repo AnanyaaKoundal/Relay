@@ -84,3 +84,10 @@ export async function updateProfile(userId: string, data: OnboardData) {
     select: PROFILE_SELECT,
   });
 }
+
+export async function getCategories() {
+  return prisma.category.findMany({
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, slug: true },
+  });
+}

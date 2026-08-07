@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { onboard, getProfile, updateProfile } from "./instructor.controller.js";
+import { onboard, getProfile, updateProfile, getCategories } from "./instructor.controller.js";
 import { authenticate } from "../../middleware/authenticate.js";
 import couponsRoutes from "./coupons.routes.js";
 import { getCourseStats, getCoursesAnalytics, getEarningsStats, getOverviewStats } from "./stats.controller.js";
@@ -12,6 +12,9 @@ router.post("/onboard", authenticate, onboard);
 
 router.get("/profile", authenticate, getProfile);
 router.put("/profile", authenticate, updateProfile);
+
+// Categories (for course creation)
+router.get("/categories", getCategories);
 
 router.use("/courses/:courseId/coupons", couponsRoutes);
 

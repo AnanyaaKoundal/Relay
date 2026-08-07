@@ -8,8 +8,6 @@ import {
   BookOpen,
   CreditCard,
   Settings,
-  LifeBuoy,
-  BarChart3,
   Tags,
   Banknote,
 } from "lucide-react";
@@ -21,8 +19,6 @@ const sidebarItems = [
   { label: "Categories", href: "/admin/categories", icon: Tags },
   { label: "Payments", href: "/admin/payments", icon: CreditCard },
   { label: "Payouts", href: "/admin/payouts", icon: Banknote },
-  { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
-  { label: "Support", href: "/admin/support", icon: LifeBuoy },
   { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 

@@ -5,6 +5,8 @@ import {
   listCategories, createCategory, updateCategory, deleteCategory,
   listPayments, getPaymentDetail, refundPayment,
   listPayouts, approvePayout, rejectPayout, getInstructorBalance,
+  getSettings, updateSettings,
+  getDashboardStats, getAnalytics,
 } from "./admin.controller.js";
 import { authenticate } from "../../middleware/authenticate.js";
 import { authorize } from "../../middleware/authorize.js";
@@ -13,6 +15,10 @@ const router = Router();
 
 router.use(authenticate);
 router.use(authorize("admin"));
+
+// Dashboard & Analytics
+router.get("/dashboard", getDashboardStats);
+router.get("/analytics", getAnalytics);
 
 // Users
 router.get("/users", listUsers);
@@ -43,5 +49,9 @@ router.post("/payouts/:payoutId/reject", rejectPayout);
 
 // Instructor Balance
 router.get("/instructors/:instructorId/balance", getInstructorBalance);
+
+// Settings
+router.get("/settings", getSettings);
+router.put("/settings", updateSettings);
 
 export default router;

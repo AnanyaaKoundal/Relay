@@ -25,7 +25,7 @@ export type AdminCourse = {
   title: string;
   status: "DRAFT" | "PUBLISHED";
   price: number;
-  thumbnailUrl: string | null;
+  bannerUrl: string | null;
   createdAt: string;
   publishedAt: string | null;
   instructor: { id: string; name: string; email: string };
@@ -48,7 +48,7 @@ export type AdminCourseDetail = {
   description: string;
   status: "DRAFT" | "PUBLISHED";
   price: number;
-  thumbnailUrl: string | null;
+  bannerUrl: string | null;
   difficulty: string | null;
   createdAt: string;
   updatedAt: string;
@@ -93,7 +93,7 @@ export type UserDetail = {
     title: string;
     status: string;
     price: number;
-    thumbnailUrl: string | null;
+    bannerUrl: string | null;
     createdAt: string;
     enrollmentCount: number;
     earnings: number;
@@ -104,7 +104,7 @@ export type UserDetail = {
     progressPercent: number;
     enrolledAt: string;
     completedAt: string | null;
-    course: { id: string; title: string; thumbnailUrl: string | null };
+    course: { id: string; title: string; bannerUrl: string | null };
   }[];
   payments: {
     id: string;

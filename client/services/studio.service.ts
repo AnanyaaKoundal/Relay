@@ -126,3 +126,15 @@ export async function requestPayout(bankDetails: {
 export async function getMyPayouts(): Promise<{ payouts: InstructorPayout[] }> {
   return request<{ payouts: InstructorPayout[] }>("/instructor/payouts");
 }
+
+// ─── Categories ───────────────────────────────────────────────
+
+export type Category = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+export async function getCategories(): Promise<Category[]> {
+  return request<Category[]>("/instructor/categories");
+}

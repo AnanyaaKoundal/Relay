@@ -2,7 +2,7 @@ export type EnrollmentCourse = {
   id: string;
   title: string;
   description: string;
-  thumbnailUrl: string | null;
+  bannerUrl: string | null;
   category: string | null;
   difficulty: string | null;
   instructor: { id: string; name: string } | null;

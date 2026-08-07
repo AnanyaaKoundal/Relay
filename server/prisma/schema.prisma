@@ -46,7 +46,7 @@ model Course {
   id           String       @id @default(uuid())
   title        String
   description  String
-  thumbnailUrl String?      @map("thumbnail_url")
+  bannerUrl String? @map("banner_url")
   categoryId   String?      @map("category_id")
   price        Decimal      @default(0)
   difficulty   Difficulty?  @default(BEGINNER)
@@ -348,4 +348,12 @@ enum PayoutStatus {
   PENDING
   COMPLETED
   FAILED
+}
+
+model PlatformSettings {
+  id        String   @id @default(uuid())
+  data      Json
+  updatedAt DateTime @updatedAt
+
+  @@map("platform_settings")
 }

@@ -32,17 +32,15 @@ export async function browseCourses(params: {
       skip,
       take: params.limit,
       orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        thumbnailUrl: true,
-        category: true,
-        price: true,
-        difficulty: true,
-        status: true,
-        publishedAt: true,
-        createdAt: true,
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      price: true,
+      status: true,
+      difficulty: true,
+      bannerUrl: true,
+      createdAt: true,
         updatedAt: true,
         instructor: {
           select: {
@@ -205,7 +203,7 @@ export async function listInstructorCourses(instructorId: string) {
       id: true,
       title: true,
       description: true,
-      thumbnailUrl: true,
+      bannerUrl: true,
       category: true,
       price: true,
       difficulty: true,
@@ -262,7 +260,7 @@ export async function updateCourse(
     difficulty?: string;
     price?: number;
     status?: string;
-    thumbnailUrl?: string | null;
+    bannerUrl?: string | null;
   },
 ) {
   const existing = await prisma.course.findFirst({
@@ -397,7 +395,7 @@ export async function getInstructorWorkspace(instructorId: string, courseId: str
     status: course.status,
     price: course.price,
     difficulty: course.difficulty,
-    thumbnailUrl: course.thumbnailUrl,
+    bannerUrl: course.bannerUrl,
     createdAt: course.createdAt,
     updatedAt: course.updatedAt,
     enrollmentCount: course._count.enrollments,

@@ -31,7 +31,7 @@ export default function CourseSettingsPage() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [difficulty, setDifficulty] = useState("BEGINNER");
-  const [thumbnailUrl, setThumbnailUrl] = useState("");
+  const [bannerUrl, setBannerUrl] = useState("");
   const [isPaid, setIsPaid] = useState(false);
   const [price, setPrice] = useState("");
 
@@ -44,7 +44,7 @@ export default function CourseSettingsPage() {
       setPrice(String(Number(course.price) || ""));
       setCategory(course.category ?? "");
       setDifficulty(course.difficulty ?? "BEGINNER");
-      setThumbnailUrl(course.thumbnailUrl ?? "");
+      setBannerUrl(course.bannerUrl ?? "");
     }).catch(() => {
       setError("Failed to load course");
     }).finally(() => {
@@ -66,7 +66,7 @@ export default function CourseSettingsPage() {
         price: isPaid ? Number(price) : 0,
         category: category || undefined,
         difficulty: difficulty || undefined,
-        thumbnailUrl: thumbnailUrl || null,
+        bannerUrl: bannerUrl || null,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);

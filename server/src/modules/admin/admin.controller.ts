@@ -4,6 +4,7 @@ import {
   listUsersSchema, updateUserStatusSchema, updateUserRoleSchema,
   listCoursesSchema, createCategorySchema, updateCategorySchema,
   listPaymentsSchema, refundPaymentSchema, listPayoutsSchema, processPayoutSchema,
+  updateSettingsSchema,
 } from "./admin.schema.js";
 import { wrap } from "../../middleware/wrap.js";
 
@@ -160,4 +161,34 @@ export const rejectPayout = wrap(async (req: Request, res: Response) => {
 export const getInstructorBalance = wrap(async (req: Request, res: Response) => {
   const balance = await adminService.getInstructorBalance(req.params.instructorId as string);
   res.json(balance);
+});
+
+// ─── Settings ─────────────────────────────────────────────────
+
+export const getSettings = wrap(async (req: Request, res: Response) => {
+  const settings = await adminService.getSettings();
+  res.json(settings);
+});
+
+export const updateSettings = wrap(async (req: Request, res: Response) => {
+  const parsed = updateSettingsSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid request" });
+    return;
+  }
+  const settings = await adminService.updateSettings(parsed.data);
+  res.json(settings);
+});
+
+// ─── Dashboard & Analytics ────────────────────────────────────
+
+export const getDashboardStats = wrap(async (req: Request, res: Response) => {
+  const stats = await adminService.getDashboardStats();
+  res.json(stats);
+});
+
+export const getAnalytics = wrap(async (req: Request, res: Response) => {
+  const range = req.query.range as string | undefined;
+  const analytics = await adminService.getAnalytics(range);
+  res.json(analytics);
 });

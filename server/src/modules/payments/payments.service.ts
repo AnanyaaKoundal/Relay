@@ -5,17 +5,16 @@ import { validateCoupon } from "../instructor/coupons.service.js";
 import crypto from "crypto";
 import type { PurchaseInput } from "./payments.schema.js";
 
-export const TAX_RATES: Record<string, number> = {
-  IN: 18,
-  GB: 20,
-  US: 0,
-  CA: 13,
-  AU: 10,
-  SG: 9,
-  DE: 19,
-  FR: 20,
-  AE: 5,
-};
+async function getTaxRates(): Promise<Record<string, number>> {
+  const settings = await prisma.platformSettings.findUnique({
+    where: { id: "default" },
+  });
+  if (settings?.data && typeof settings.data === "object" && "taxRates" in settings.data) {
+    return settings.data.taxRates as Record<string, number>;
+  }
+  // Fallback defaults
+  return { IN: 18, GB: 20, US: 0, CA: 13, AU: 10, SG: 9, DE: 19, FR: 20, AE: 5 };
+}
 
 
 function formatPayment(payment: Payment, enrollment: { id: string; courseId: string }) {
@@ -85,7 +84,8 @@ export async function purchaseCourse(input: PurchaseInput) {
   }
 
   const taxableBase = Math.round((subtotal - discountAmount) * 100) / 100;
-  const expectedTax = Math.round(taxableBase * ((TAX_RATES[billingCountry] ?? 0) / 100) * 100) / 100;
+  const taxRates = await getTaxRates();
+  const expectedTax = Math.round(taxableBase * ((taxRates[billingCountry] ?? 0) / 100) * 100) / 100;
   if (Math.abs(expectedTax - taxAmount) > 0.01) {
     throw new AppError("Tax amount does not match expected rate", 400);
   }
@@ -179,7 +179,7 @@ export async function getPayment(paymentId: string, userId: string) {
     include: {
       enrollments: {
         include: {
-          course: { select: { id: true, title: true, thumbnailUrl: true } },
+          course: { select: { id: true, title: true, bannerUrl: true } },
         },
       },
     },
@@ -211,7 +211,7 @@ export async function listMyPayments(userId: string) {
     include: {
       enrollments: {
         include: {
-          course: { select: { id: true, title: true, thumbnailUrl: true } },
+          course: { select: { id: true, title: true, bannerUrl: true } },
         },
       },
     },

@@ -184,3 +184,62 @@ export async function rejectPayout(payoutId: string, notes?: string) {
     body: JSON.stringify({ notes }),
   });
 }
+
+// Settings
+export async function getSettings() {
+  return request<PlatformSettings>("/admin/settings");
+}
+
+export async function updateSettings(data: Partial<PlatformSettings>) {
+  return request<PlatformSettings>("/admin/settings", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+export type PlatformSettings = {
+  platformName: string;
+  commissionRate: number;
+  currency: string;
+  taxRates: Record<string, number>;
+};
+
+// ─── Dashboard & Analytics ────────────────────────────────────
+
+export type DashboardStats = {
+  kpis: {
+    totalUsers: number;
+    totalCourses: number;
+    totalEnrollments: number;
+    totalRevenue: number;
+  };
+  roleBreakdown: {
+    learners: number;
+    instructors: number;
+    admins: number;
+  };
+  recentEnrollments: {
+    id: string;
+    student: string;
+    course: string;
+    amount: number;
+    date: string;
+  }[];
+};
+
+export type AnalyticsData = {
+  revenueByDay: { date: string; revenue: number }[];
+  geoDistribution: { country: string; enrollments: number; revenue: number }[];
+  topInstructors: { id: string; name: string; courseCount: number; students: number; revenue: number }[];
+  topCourses: { id: string; title: string; instructor: string; enrollments: number; revenue: number; status: string }[];
+};
+
+export async function getDashboardStats(): Promise<DashboardStats> {
+  return request<DashboardStats>("/admin/dashboard");
+}
+
+export async function getAnalytics(range?: string): Promise<AnalyticsData> {
+  const query = range ? `?range=${range}` : "";
+  return request<AnalyticsData>(`/admin/analytics${query}`);
+}

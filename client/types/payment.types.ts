@@ -48,7 +48,7 @@ export interface PaymentDetail {
     course: {
         id: string;
         title: string;
-        thumbnailUrl: string | null;
+        bannerUrl: string | null;
     } | null;
 }
 
@@ -71,6 +71,6 @@ export interface Purchase {
     course: {
         id: string;
         title: string;
-        thumbnailUrl: string | null;
+        bannerUrl: string | null;
     } | null;
 }

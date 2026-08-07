@@ -29,5 +29,5 @@ export const updateCourseSchema = z.object({
   status: z
     .enum(["DRAFT", "PUBLISHED"])
     .optional(),
-  thumbnailUrl: z.string().nullable().optional(),
+  bannerUrl: z.string().nullable().optional(),
 });

@@ -64,6 +64,14 @@ export const processPayoutSchema = z.object({
   notes: z.string().max(500).optional(),
 });
 
+// Settings
+export const updateSettingsSchema = z.object({
+  platformName: z.string().min(1).max(100).optional(),
+  commissionRate: z.number().min(0).max(100).optional(),
+  currency: z.string().min(3).max(3).optional(),
+  taxRates: z.record(z.string(), z.number().min(0).max(100)).optional(),
+});
+
 // Types
 export type ListUsersInput = z.infer<typeof listUsersSchema>;
 export type UpdateUserStatusInput = z.infer<typeof updateUserStatusSchema>;
@@ -75,3 +83,4 @@ export type ListPaymentsInput = z.infer<typeof listPaymentsSchema>;
 export type RefundPaymentInput = z.infer<typeof refundPaymentSchema>;
 export type ListPayoutsInput = z.infer<typeof listPayoutsSchema>;
 export type ProcessPayoutInput = z.infer<typeof processPayoutSchema>;
+export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;

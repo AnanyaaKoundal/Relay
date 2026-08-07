@@ -1,7 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { FilterSelect } from "@/components/shared/filter-select";
+import { getCategories, type Category } from "@/services/studio.service";
 
 interface Props {
   title: string;
@@ -12,8 +14,8 @@ interface Props {
   setCategory: (v: string) => void;
   difficulty: string;
   setDifficulty: (v: string) => void;
-  thumbnailUrl: string;
-  setThumbnailUrl: (v: string) => void;
+  bannerUrl: string;
+  setBannerUrl: (v: string) => void;
 }
 
 export function DetailsTab({
@@ -21,8 +23,16 @@ export function DetailsTab({
   description, setDescription,
   category, setCategory,
   difficulty, setDifficulty,
-  thumbnailUrl, setThumbnailUrl,
+  bannerUrl, setBannerUrl,
 }: Props) {
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    getCategories()
+      .then(setCategories)
+      .catch(console.error);
+  }, []);
+
   return (
     <>
       <div>
@@ -49,12 +59,12 @@ export function DetailsTab({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="s-category" className="text-xs font-medium text-muted-foreground">Category</label>
-          <input
-            id="s-category"
+          <FilterSelect
             value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            placeholder="e.g. Web Development"
-            className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+            placeholder="Select category"
+            onChange={setCategory}
+            options={categories.map((c) => ({ label: c.name, value: c.id }))}
+            className="mt-1"
           />
         </div>
         <div>
@@ -74,11 +84,11 @@ export function DetailsTab({
       </div>
 
       <div>
-        <label htmlFor="s-thumb" className="text-xs font-medium text-muted-foreground">Thumbnail URL</label>
+        <label htmlFor="s-thumb" className="text-xs font-medium text-muted-foreground">Banner URL</label>
         <input
           id="s-thumb"
-          value={thumbnailUrl}
-          onChange={(e) => setThumbnailUrl(e.target.value)}
+          value={bannerUrl}
+          onChange={(e) => setBannerUrl(e.target.value)}
           placeholder="https://..."
           className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
         />

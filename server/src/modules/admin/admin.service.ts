@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/app-error.js";
-import type { ListUsersInput, ListCoursesInput, CreateCategoryInput, UpdateCategoryInput, ListPaymentsInput, ListPayoutsInput } from "./admin.schema.js";
+import type { Prisma } from "@prisma/client";
+import type { ListUsersInput, ListCoursesInput, CreateCategoryInput, UpdateCategoryInput, ListPaymentsInput, ListPayoutsInput, UpdateSettingsInput } from "./admin.schema.js";
 
 export async function listUsers(input: ListUsersInput) {
   const { search, role, status, page, limit } = input;
@@ -100,7 +101,7 @@ export async function getUserDetail(userId: string) {
         title: true,
         status: true,
         price: true,
-        thumbnailUrl: true,
+        bannerUrl: true,
         createdAt: true,
         _count: { select: { enrollments: true } },
       },
@@ -114,7 +115,7 @@ export async function getUserDetail(userId: string) {
         progressPercent: true,
         enrolledAt: true,
         completedAt: true,
-        course: { select: { id: true, title: true, thumbnailUrl: true } },
+        course: { select: { id: true, title: true, bannerUrl: true } },
       },
       orderBy: { enrolledAt: "desc" },
     }),
@@ -245,7 +246,7 @@ export async function listCourses(input: ListCoursesInput) {
         title: true,
         status: true,
         price: true,
-        thumbnailUrl: true,
+        bannerUrl: true,
         createdAt: true,
         publishedAt: true,
         instructor: { select: { id: true, name: true, email: true } },
@@ -262,7 +263,7 @@ export async function listCourses(input: ListCoursesInput) {
       title: c.title,
       status: c.status,
       price: Number(c.price),
-      thumbnailUrl: c.thumbnailUrl,
+      bannerUrl: c.bannerUrl,
       createdAt: c.createdAt,
       publishedAt: c.publishedAt,
       instructor: c.instructor,
@@ -664,5 +665,217 @@ export async function getInstructorBalance(instructorId: string) {
   return {
     pendingBalance,
     totalEarned: Math.round(totalEarned * 100) / 100,
+  };
+}
+
+// Settings
+const DEFAULT_SETTINGS = {
+  platformName: "Relay",
+  commissionRate: 10,
+  currency: "INR",
+  taxRates: {
+    IN: 18,
+    GB: 20,
+    US: 0,
+    CA: 13,
+    AU: 10,
+    SG: 9,
+    DE: 19,
+    FR: 20,
+    AE: 5,
+  },
+};
+
+export async function getSettings() {
+  const settings = await prisma.platformSettings.findUnique({
+    where: { id: "default" },
+  });
+
+  if (!settings) {
+    // Create default settings if none exist
+    const created = await prisma.platformSettings.create({
+      data: { id: "default", data: DEFAULT_SETTINGS },
+    });
+    return created.data;
+  }
+
+  return settings.data;
+}
+
+export async function updateSettings(input: UpdateSettingsInput) {
+  const current = await getSettings() as Record<string, unknown>;
+  
+  const updated = {
+    ...current,
+    ...Object.fromEntries(Object.entries(input).filter(([, v]) => v !== undefined)),
+  } as unknown as Prisma.InputJsonValue;
+
+  const saved = await prisma.platformSettings.upsert({
+    where: { id: "default" },
+    update: { data: updated },
+    create: { id: "default", data: updated },
+  });
+
+  return saved.data;
+}
+
+// ─── Dashboard ────────────────────────────────────────────────
+
+export async function getDashboardStats() {
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const [
+    totalUsers,
+    totalCourses,
+    totalEnrollments,
+    revenueResult,
+    recentEnrollments,
+    usersByRole,
+  ] = await Promise.all([
+    prisma.user.count(),
+    prisma.course.count(),
+    prisma.enrollment.count(),
+    prisma.payment.aggregate({
+      where: { status: "SUCCEEDED" },
+      _sum: { totalAmount: true },
+    }),
+    prisma.enrollment.findMany({
+      take: 10,
+      orderBy: { enrolledAt: "desc" },
+      select: {
+        id: true,
+        enrolledAt: true,
+        user: { select: { id: true, name: true, email: true } },
+        course: { select: { id: true, title: true, price: true } },
+        payment: { select: { totalAmount: true, status: true } },
+      },
+    }),
+    prisma.user.groupBy({
+      by: ["isAdmin", "isInstructor"],
+      _count: true,
+    }),
+  ]);
+
+  const roleBreakdown = { learners: 0, instructors: 0, admins: 0 };
+  for (const row of usersByRole) {
+    if (row.isAdmin) roleBreakdown.admins += row._count;
+    else if (row.isInstructor) roleBreakdown.instructors += row._count;
+    else roleBreakdown.learners += row._count;
+  }
+
+  return {
+    kpis: {
+      totalUsers,
+      totalCourses,
+      totalEnrollments,
+      totalRevenue: Number(revenueResult._sum.totalAmount ?? 0),
+    },
+    roleBreakdown,
+    recentEnrollments: recentEnrollments.map((e) => ({
+      id: e.id,
+      student: e.user.name,
+      course: e.course.title,
+      amount: e.payment ? Number(e.payment.totalAmount) : 0,
+      date: e.enrolledAt,
+    })),
+  };
+}
+
+// ─── Analytics ────────────────────────────────────────────────
+
+type RevenueByDayRow = { bucket: Date; revenue: string | null };
+type GeoRow = { country: string; count: number; revenue: string | null };
+type InstructorRow = { id: string; name: string; courseCount: number; totalStudents: number; totalRevenue: string | null };
+type CourseRow = { id: string; title: string; instructor: string; enrollments: number; revenue: string | null; status: string };
+
+export async function getAnalytics(range?: string) {
+  const now = new Date();
+  const days = range === "7d" ? 7 : range === "90d" ? 90 : range === "1y" ? 365 : 30;
+  const startDate = new Date(now);
+  startDate.setDate(startDate.getDate() - days);
+
+  const [revenueByDay, geoData, topInstructors, topCourses] = await Promise.all([
+    // Revenue by day
+    prisma.$queryRaw<RevenueByDayRow[]>`
+      SELECT date_trunc('day', e."enrolled_at") AS bucket,
+             SUM(p."total_amount") AS revenue
+      FROM enrollments e
+      JOIN payments p ON p.id = e."payment_id"
+      WHERE p.status = 'SUCCEEDED'
+        AND e."enrolled_at" >= ${startDate}
+      GROUP BY bucket
+      ORDER BY bucket
+    `,
+    // Geographic distribution
+    prisma.$queryRaw<GeoRow[]>`
+      SELECT p."billing_country" AS country,
+             COUNT(*) AS count,
+             SUM(p."total_amount") AS revenue
+      FROM payments p
+      WHERE p.status = 'SUCCEEDED'
+        AND p."billing_country" IS NOT NULL
+      GROUP BY country
+      ORDER BY count DESC
+      LIMIT 10
+    `,
+    // Top instructors
+    prisma.$queryRaw<InstructorRow[]>`
+      SELECT u.id, u.name,
+             COUNT(DISTINCT c.id) AS "courseCount",
+             COUNT(DISTINCT e.id) AS "totalStudents",
+             COALESCE(SUM(p."total_amount"), 0) AS "totalRevenue"
+      FROM users u
+      JOIN courses c ON c."instructor_id" = u.id
+      LEFT JOIN enrollments e ON e."course_id" = c.id
+      LEFT JOIN payments p ON p.id = e."payment_id" AND p.status = 'SUCCEEDED'
+      WHERE u.is_instructor = true
+      GROUP BY u.id, u.name
+      ORDER BY "totalRevenue" DESC
+      LIMIT 10
+    `,
+    // Top courses
+    prisma.$queryRaw<CourseRow[]>`
+      SELECT c.id, c.title,
+             u.name AS instructor,
+             COUNT(DISTINCT e.id) AS enrollments,
+             COALESCE(SUM(p."total_amount"), 0) AS revenue,
+             c.status
+      FROM courses c
+      JOIN users u ON u.id = c."instructor_id"
+      LEFT JOIN enrollments e ON e."course_id" = c.id
+      LEFT JOIN payments p ON p.id = e."payment_id" AND p.status = 'SUCCEEDED'
+      GROUP BY c.id, c.title, u.name, c.status
+      ORDER BY revenue DESC
+      LIMIT 10
+    `,
+  ]);
+
+  return {
+    revenueByDay: revenueByDay.map((r) => ({
+      date: r.bucket.toISOString().slice(0, 10),
+      revenue: Number(r.revenue ?? 0),
+    })),
+    geoDistribution: geoData.map((g) => ({
+      country: g.country,
+      enrollments: Number(g.count),
+      revenue: Number(g.revenue ?? 0),
+    })),
+    topInstructors: topInstructors.map((i) => ({
+      id: i.id,
+      name: i.name,
+      courseCount: Number(i.courseCount),
+      students: Number(i.totalStudents),
+      revenue: Number(i.totalRevenue ?? 0),
+    })),
+    topCourses: topCourses.map((c) => ({
+      id: c.id,
+      title: c.title,
+      instructor: c.instructor,
+      enrollments: Number(c.enrollments),
+      revenue: Number(c.revenue ?? 0),
+      status: c.status,
+    })),
   };
 }

@@ -43,3 +43,8 @@ export const updateProfile = wrap(async (req: Request, res: Response) => {
   const result = await instructorService.updateProfile(userId, parsed.data);
   res.json(result);
 });
+
+export const getCategories = wrap(async (req: Request, res: Response) => {
+  const categories = await instructorService.getCategories();
+  res.json(categories);
+});

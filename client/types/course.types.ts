@@ -6,7 +6,7 @@ export type CourseListItem = {
   id: string;
   title: string;
   description: string;
-  thumbnailUrl: string | null;
+  bannerUrl: string | null;
   status: CourseStatus;
   difficulty: string | null;
   category: string | null;
@@ -20,7 +20,7 @@ export type CourseListItem = {
 };
 
 export type CourseDetail = CourseListItem & {
-  thumbnailUrl: string | null;
+  bannerUrl: string | null;
   publishedAt: string | null;
   instructorId: string;
 };
@@ -35,7 +35,7 @@ export type CreateCourseInput = {
 
 export type UpdateCourseInput = Partial<CreateCourseInput> & {
   status?: CourseStatus;
-  thumbnailUrl?: string | null;
+  bannerUrl?: string | null;
 };
 
 export type Promo = {
@@ -58,7 +58,7 @@ export type PublicCourse = {
   id: string;
   title: string;
   description: string;
-  thumbnailUrl: string | null;
+  bannerUrl: string | null;
   category: string | null;
   price: number;
   difficulty: string | null;

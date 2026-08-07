@@ -53,7 +53,7 @@ export async function checkEnrollment(userId: string, courseId: string) {
           id: true,
           title: true,
           description: true,
-          thumbnailUrl: true,
+          bannerUrl: true,
           instructor: { select: { id: true, name: true } },
           chapters: {
             orderBy: { orderIndex: "asc" },
@@ -107,7 +107,7 @@ export async function listEnrolledCourses(userId: string) {
           id: true,
           title: true,
           description: true,
-          thumbnailUrl: true,
+          bannerUrl: true,
           category: true,
           difficulty: true,
           instructor: { select: { id: true, name: true } },
