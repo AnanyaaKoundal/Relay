@@ -102,3 +102,27 @@ export async function updateInstructorProfile(
     body: JSON.stringify(data),
   });
 }
+
+// ─── Payouts ─────────────────────────────────────────────────
+
+import type { InstructorBalance, InstructorPayout } from "@/types/studio.types";
+
+export async function getMyBalance(): Promise<InstructorBalance> {
+  return request<InstructorBalance>("/instructor/balance");
+}
+
+export async function requestPayout(bankDetails: {
+  accountNumber: string;
+  ifscCode: string;
+  bankName: string;
+  accountHolderName: string;
+}): Promise<InstructorPayout> {
+  return request<InstructorPayout>("/instructor/payouts/request", {
+    method: "POST",
+    body: JSON.stringify(bankDetails),
+  });
+}
+
+export async function getMyPayouts(): Promise<{ payouts: InstructorPayout[] }> {
+  return request<{ payouts: InstructorPayout[] }>("/instructor/payouts");
+}

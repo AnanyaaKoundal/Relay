@@ -608,26 +608,17 @@ export async function listPayouts(input: ListPayoutsInput) {
 export async function approvePayout(payoutId: string, notes?: string) {
   const payout = await prisma.payout.findUnique({
     where: { id: payoutId },
-    select: { id: true, status: true, amount: true, instructorId: true },
+    select: { id: true, status: true },
   });
 
   if (!payout) throw new AppError("Payout not found", 404);
   if (payout.status !== "PENDING") throw new AppError("Only pending payouts can be approved", 400);
 
-  const [updated] = await prisma.$transaction([
-    prisma.payout.update({
-      where: { id: payoutId },
-      data: { status: "COMPLETED", processedAt: new Date(), notes },
-      select: { id: true, status: true, amount: true, processedAt: true },
-    }),
-    prisma.instructorBalance.update({
-      where: { userId: payout.instructorId },
-      data: {
-        pendingBalance: { decrement: payout.amount },
-        lastPayoutAt: new Date(),
-      },
-    }),
-  ]);
+  const updated = await prisma.payout.update({
+    where: { id: payoutId },
+    data: { status: "COMPLETED", processedAt: new Date(), notes },
+    select: { id: true, status: true, amount: true, processedAt: true },
+  });
 
   return { ...updated, amount: Number(updated.amount) };
 }
@@ -635,44 +626,43 @@ export async function approvePayout(payoutId: string, notes?: string) {
 export async function rejectPayout(payoutId: string, notes?: string) {
   const payout = await prisma.payout.findUnique({
     where: { id: payoutId },
-    select: { id: true, status: true, amount: true, instructorId: true },
+    select: { id: true, status: true },
   });
 
   if (!payout) throw new AppError("Payout not found", 404);
   if (payout.status !== "PENDING") throw new AppError("Only pending payouts can be rejected", 400);
 
-  const [updated] = await prisma.$transaction([
-    prisma.payout.update({
-      where: { id: payoutId },
-      data: { status: "FAILED", processedAt: new Date(), notes },
-      select: { id: true, status: true, amount: true, processedAt: true },
-    }),
-    prisma.instructorBalance.update({
-      where: { userId: payout.instructorId },
-      data: { pendingBalance: { decrement: payout.amount } },
-    }),
-  ]);
+  const updated = await prisma.payout.update({
+    where: { id: payoutId },
+    data: { status: "FAILED", processedAt: new Date(), notes },
+    select: { id: true, status: true, amount: true, processedAt: true },
+  });
 
   return { ...updated, amount: Number(updated.amount) };
 }
 
 export async function getInstructorBalance(instructorId: string) {
-  const balance = await prisma.instructorBalance.findUnique({
-    where: { userId: instructorId },
-    select: {
-      pendingBalance: true,
-      totalEarned: true,
-      lastPayoutAt: true,
-    },
+  const PLATFORM_FEE_PERCENT = 10;
+
+  const enrollments = await prisma.enrollment.findMany({
+    where: { course: { instructorId } },
+    select: { payment: { select: { totalAmount: true, status: true } } },
   });
 
-  if (!balance) {
-    return { pendingBalance: 0, totalEarned: 0, lastPayoutAt: null };
-  }
+  const totalEarned = enrollments
+    .filter((e) => e.payment?.status === "SUCCEEDED")
+    .reduce((sum, e) => sum + Number(e.payment?.totalAmount ?? 0), 0) * (1 - PLATFORM_FEE_PERCENT / 100);
+
+  const completedPayouts = await prisma.payout.aggregate({
+    where: { instructorId, status: "COMPLETED" },
+    _sum: { amount: true },
+  });
+
+  const totalPaidOut = Number(completedPayouts._sum.amount ?? 0);
+  const pendingBalance = Math.max(0, Math.round((totalEarned - totalPaidOut) * 100) / 100);
 
   return {
-    pendingBalance: Number(balance.pendingBalance),
-    totalEarned: Number(balance.totalEarned),
-    lastPayoutAt: balance.lastPayoutAt,
+    pendingBalance,
+    totalEarned: Math.round(totalEarned * 100) / 100,
   };
 }

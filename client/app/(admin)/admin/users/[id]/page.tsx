@@ -6,6 +6,7 @@ import type { UserDetail } from "@/types/admin.types";
 import { getUserDetail, updateUserStatus, updateUserRole } from "@/services/admin.service";
 import { RoleBadge } from "@/components/admin/users/role-badge";
 import { StatusBadge } from "@/components/admin/users/status-badge";
+import { PriceDisplay } from "@/components/shared/price-display";
 import { ArrowLeft, Ban, CheckCircle, Shield, ShieldOff } from "lucide-react";
 
 type Tab = "overview" | "courses" | "enrollments" | "payments";
@@ -260,7 +261,7 @@ export default function AdminUserDetailPage() {
                       {course.title}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      ₹{course.price.toLocaleString()} · {course.enrollmentCount} enrolled · {course.status}
+                      <PriceDisplay price={course.price} /> · {course.enrollmentCount} enrolled · {course.status}
                     </p>
                   </div>
                   {user.isInstructor && (

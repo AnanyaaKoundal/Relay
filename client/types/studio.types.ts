@@ -236,3 +236,18 @@ export type StudioEarnings = {
   coupons: StudioCouponPerformance[];
   transactions: StudioTransaction[];
 };
+
+export type InstructorBalance = {
+  pendingBalance: number;
+  totalEarned: number;
+  lastPayoutAt: string | null;
+};
+
+export type InstructorPayout = {
+  id: string;
+  amount: number;
+  status: "PENDING" | "COMPLETED" | "FAILED";
+  notes: string | null;
+  createdAt: string;
+  processedAt: string | null;
+};

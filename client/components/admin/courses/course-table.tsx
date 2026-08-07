@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import type { AdminCourse } from "@/types/admin.types";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { PriceDisplay } from "@/components/shared/price-display";
 
 type CourseTableProps = {
   courses: AdminCourse[];
@@ -50,7 +51,7 @@ export function CourseTable({ courses, onSelectCourse }: CourseTableProps) {
                 <StatusBadge status={course.status} />
               </td>
               <td className="px-4 py-3 text-muted-foreground">{course.category?.name ?? "—"}</td>
-              <td className="px-4 py-3 font-medium">₹{course.price.toLocaleString()}</td>
+              <td className="px-4 py-3 font-medium"><PriceDisplay price={course.price} /></td>
               <td className="px-4 py-3 text-muted-foreground">{course.enrollmentCount}</td>
               <td className="px-4 py-3 text-muted-foreground">
                 {new Date(course.createdAt).toLocaleDateString()}

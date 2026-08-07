@@ -12,6 +12,9 @@ import { CourseEarningsTable } from "@/components/studio/earnings/course-earning
 import { CouponPerformance } from "@/components/studio/earnings/coupon-performance";
 import { TransactionsTable } from "@/components/studio/earnings/transactions-table";
 import { EarningsSkeleton } from "@/components/studio/earnings/earnings-skeleton";
+import { BalanceCard } from "@/components/studio/earnings/balance-card";
+import { PayoutRequestDrawer } from "@/components/studio/earnings/payout-request-drawer";
+import { PayoutHistory } from "@/components/studio/earnings/payout-history";
 import { IndianRupee, Wallet, Receipt, Percent } from "lucide-react";
 
 type EarningsParams = { range: StudioRange; from?: string; to?: string };
@@ -22,6 +25,8 @@ export default function StudioEarningsPage() {
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [loaded, setLoaded] = useState<LoadedEarnings | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showPayoutDrawer, setShowPayoutDrawer] = useState(false);
+  const [balanceKey, setBalanceKey] = useState(0);
 
   const paramsKey = `${params.range}|${params.from ?? ""}|${params.to ?? ""}`;
   const isRefreshing = loaded !== null && loaded.params !== paramsKey;
@@ -135,6 +140,13 @@ export default function StudioEarningsPage() {
             ))}
           </div>
 
+          <div className="mt-4">
+            <BalanceCard
+              key={balanceKey}
+              onRequestPayout={() => setShowPayoutDrawer(true)}
+            />
+          </div>
+
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
             <EarningsFlow data={stats.moneyFlow} topCourseShare={topCourseShare} />
             <RevenueTrendChart
@@ -157,8 +169,18 @@ export default function StudioEarningsPage() {
           <div className="mt-6">
             <TransactionsTable transactions={stats.transactions} />
           </div>
+
+          <div className="mt-6">
+            <PayoutHistory key={balanceKey} />
+          </div>
         </>
       ) : null}
+
+      <PayoutRequestDrawer
+        open={showPayoutDrawer}
+        onClose={() => setShowPayoutDrawer(false)}
+        onSubmitted={() => setBalanceKey((k) => k + 1)}
+      />
     </div>
   );
 }

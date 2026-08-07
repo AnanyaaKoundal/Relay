@@ -6,6 +6,7 @@ import type { UserDetail } from "@/types/admin.types";
 import { getUserDetail, updateUserStatus, updateUserRole } from "@/services/admin.service";
 import { RoleBadge } from "./role-badge";
 import { StatusBadge } from "./status-badge";
+import { PriceDisplay } from "@/components/shared/price-display";
 import { X, Ban, CheckCircle, Shield, ShieldOff, ExternalLink } from "lucide-react";
 
 type UserDetailDrawerProps = {

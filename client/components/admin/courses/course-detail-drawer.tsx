@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import type { AdminCourseDetail } from "@/types/admin.types";
 import { getCourseDetail, deleteCourse } from "@/services/admin.service";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { PriceDisplay } from "@/components/shared/price-display";
 import { X, Trash2, ExternalLink } from "lucide-react";
 
 type CourseDetailDrawerProps = {
@@ -83,7 +84,7 @@ export function CourseDetailDrawer({ courseId, onClose, onCourseUpdated }: Cours
             <div className="grid grid-cols-3 gap-4">
               <div className="rounded-lg border p-3">
                 <p className="text-xs text-muted-foreground">Price</p>
-                <p className="text-lg font-semibold">₹{course.price.toLocaleString()}</p>
+                <p className="text-lg font-semibold"><PriceDisplay price={course.price} /></p>
               </div>
               <div className="rounded-lg border p-3">
                 <p className="text-xs text-muted-foreground">Enrolled</p>

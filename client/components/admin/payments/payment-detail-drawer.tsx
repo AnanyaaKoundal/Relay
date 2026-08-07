@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { AdminPaymentDetail } from "@/types/admin.types";
 import { getPaymentDetail, refundPayment } from "@/services/admin.service";
 import { Textarea } from "@/components/ui/textarea";
+import { PriceDisplay } from "@/components/shared/price-display";
 
 const statusStyles: Record<string, string> = {
   SUCCEEDED: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -140,7 +141,7 @@ export function PaymentDetailDrawer({
                   </div>
                   <div className="flex justify-between px-4 py-2">
                     <span className="text-muted-foreground">Price</span>
-                    <span>₹{payment.enrollment.course.price.toLocaleString()}</span>
+                    <span><PriceDisplay price={payment.enrollment.course.price} /></span>
                   </div>
                 </div>
               </div>
