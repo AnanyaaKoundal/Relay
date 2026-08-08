@@ -1,6 +1,6 @@
 # Relay
 
-A full-stack video learning platform built with Next.js, Express, PostgreSQL, and TypeScript. Supports three roles — learners, instructors, and administrators — with a video processing pipeline that transcodes uploads into adaptive HLS streams.
+A full-stack video learning platform built with Next.js, Express, PostgreSQL, and TypeScript. Supports three roles (learners, instructors, administrators) with a video processing pipeline that transcodes uploads into adaptive HLS streams.
 
 ## 🎯 Features
 
@@ -69,11 +69,11 @@ A full-stack video learning platform built with Next.js, Express, PostgreSQL, an
 
 The core differentiator of this project is the end-to-end video processing pipeline:
 
-1. **Upload** — Instructor selects a video file. The backend generates presigned S3 URLs; the frontend uploads directly to RustFS via an XHR proxy (avoiding CORS issues) with progress tracking.
+1. **Upload** — Instructor selects a video file. The backend generates presigned S3 URLs, the frontend uploads directly to RustFS via an XHR proxy (avoiding CORS issues) with progress tracking.
 
 2. **Transcode** — On upload completion, a BullMQ job is enqueued. The worker downloads the raw file, runs FFmpeg to produce three HLS quality tiers (1080p, 720p, 480p) with 6-second segments, and generates a master playlist for adaptive bitrate switching.
 
-3. **Stream** — The frontend player uses HLS.js to load the master playlist, automatically selecting the best quality based on network conditions. Supports manual quality override, playback speed (0.25x–2x), picture-in-picture, fullscreen, and keyboard shortcuts.
+3. **Stream** — The frontend player uses HLS.js to load the master playlist, automatically selecting the best quality based on network conditions. Supports manual quality override, playback speed (0.25x to 2x), picture-in-picture, fullscreen, and keyboard shortcuts.
 
 4. **Status tracking** — The frontend polls processing status every 3 seconds, showing progress from uploading → processing → ready (or failed with retry).
 
@@ -147,10 +147,10 @@ relay/
 
 ## 🔮 Future Improvements
 
-- **Real payment gateway** — Integrate Stripe or Razorpay for actual payment processing
-- **Tests** — Add unit and integration tests for critical flows
-- **Error boundaries** — React error boundaries for graceful failure recovery
-- **Real-time updates** — WebSocket-based notifications and live analytics
-- **Google OAuth** — Implement the full OAuth flow for social login
-- **Video watch tracking** — Time-based progress with position resume
-- **Course reviews and ratings** — Learner feedback system with aggregate ratings
+- **Real payment gateway**: Integrate Stripe or Razorpay for actual payment processing
+- **Tests**: Add unit and integration tests for critical flows
+- **Error boundaries**: React error boundaries for graceful failure recovery
+- **Real-time updates**: WebSocket-based notifications and live analytics
+- **Google OAuth**: Implement the full OAuth flow for social login
+- **Video watch tracking**: Time-based progress with position resume
+- **Course reviews and ratings**: Learner feedback system with aggregate ratings
