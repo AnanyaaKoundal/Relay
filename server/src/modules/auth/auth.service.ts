@@ -4,7 +4,10 @@ import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../lib/app-error.js";
 import { logger } from "../../utils/logger.js";
 
-const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret";
+if (!process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET environment variable is required");
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
 export type AuthPayload = {
   userId: string;

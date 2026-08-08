@@ -1,9 +1,11 @@
 import { Router } from "express";
-import { purchase, getPayment, getCountry, checkCoupon, listMyPayments } from "./payments.controller.js";
+import { purchase, getPayment, getCountry, checkCoupon, listMyPayments, getTaxRates } from "./payments.controller.js";
 import { authenticate } from "../../middleware/authenticate.js";
 import { rateLimit } from "../../middleware/rate-limit.js";
 
 const router = Router();
+
+router.get("/tax-rates", getTaxRates);
 
 router.use(authenticate);
 

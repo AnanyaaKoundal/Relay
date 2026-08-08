@@ -31,6 +31,10 @@ export async function getCountry(): Promise<{ country: string | null }> {
   return request<{ country: string | null }>("/payments/country");
 }
 
+export async function getTaxRates(): Promise<{ taxRates: Record<string, number> }> {
+  return request<{ taxRates: Record<string, number> }>("/payments/tax-rates");
+}
+
 export async function purchaseCourse(input: PurchaseRequest): Promise<PurchaseResponse> {
   return request<PurchaseResponse>("/payments/purchase", {
     method: "POST",

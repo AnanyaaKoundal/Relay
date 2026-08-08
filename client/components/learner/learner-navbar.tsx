@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Search,
-  Bell,
   BookOpen,
   Receipt,
   UserRound,
@@ -81,12 +80,6 @@ export function LearnerNavbar() {
 
         {/* Right side */}
         <div className="ml-auto flex items-center gap-2">
-          {/* Notification bell */}
-          <Button variant="ghost" size="icon" className="relative text-muted-foreground">
-            <Bell className="size-4" />
-            <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-primary" />
-          </Button>
-
           {/* Instructor CTA */}
           {isInstructor ? (
             <Link

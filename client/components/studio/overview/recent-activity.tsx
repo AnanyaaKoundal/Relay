@@ -26,6 +26,7 @@ function timeAgo(date: string): string {
 }
 
 export function RecentActivity({ items }: RecentActivityProps) {
+  const recent = items.slice(0, 5);
   return (
     <div className="rounded-xl border bg-card p-5">
       <div className="flex items-center justify-between">
@@ -33,13 +34,13 @@ export function RecentActivity({ items }: RecentActivityProps) {
         <span className="text-xs text-muted-foreground">Enrollments & sales</span>
       </div>
 
-      {items.length === 0 ? (
+      {recent.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
           No activity yet. Share your courses to get students.
         </p>
       ) : (
         <div className="mt-3 divide-y">
-          {items.map((item) => (
+          {recent.map((item) => (
             <Link
               key={item.id}
               href={

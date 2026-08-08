@@ -5,7 +5,7 @@ import { validateCoupon } from "../instructor/coupons.service.js";
 import crypto from "crypto";
 import type { PurchaseInput } from "./payments.schema.js";
 
-async function getTaxRates(): Promise<Record<string, number>> {
+export async function getTaxRates(): Promise<Record<string, number>> {
   const settings = await prisma.platformSettings.findUnique({
     where: { id: "default" },
   });

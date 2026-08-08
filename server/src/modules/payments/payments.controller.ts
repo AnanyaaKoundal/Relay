@@ -5,6 +5,11 @@ import { validateCoupon } from "../instructor/coupons.service.js";
 import { wrap } from "../../middleware/wrap.js";
 import { logger } from "../../utils/logger.js";
 
+export const getTaxRates = wrap(async (_req: Request, res: Response) => {
+  const rates = await paymentService.getTaxRates();
+  res.json({ taxRates: rates });
+});
+
 export const purchase = wrap(async (req: Request, res: Response) => {
   const parsed = purchaseSchema.safeParse(req.body);
   if (!parsed.success) {

@@ -5,22 +5,22 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { getPublicCourse } from "@/services/course.service";
-import { purchaseCourse, getCountry, validateCoupon } from "@/services/payment.service";
+import { purchaseCourse, getCountry, validateCoupon, getTaxRates } from "@/services/payment.service";
 import type { PublicCourseDetail } from "@/types/course.types";
 import { resolveBannerUrl } from "@/lib/utils";
 import { Loader2, CreditCard, Lock, Ticket } from "lucide-react";
 import { PurchaseResponse, ValidateCouponResult } from "@/types/payment.types";
 
-const COUNTRIES: Record<string, { name: string; taxName: string; taxRate: number }> = {
-  IN: { name: "India", taxName: "GST", taxRate: 18 },
-  US: { name: "United States", taxName: "", taxRate: 0 },
-  GB: { name: "United Kingdom", taxName: "VAT", taxRate: 20 },
-  CA: { name: "Canada", taxName: "HST", taxRate: 13 },
-  AU: { name: "Australia", taxName: "GST", taxRate: 10 },
-  SG: { name: "Singapore", taxName: "GST", taxRate: 9 },
-  DE: { name: "Germany", taxName: "VAT", taxRate: 19 },
-  FR: { name: "France", taxName: "VAT", taxRate: 20 },
-  AE: { name: "UAE", taxName: "VAT", taxRate: 5 },
+const COUNTRIES: Record<string, { name: string; taxName: string }> = {
+  IN: { name: "India", taxName: "GST" },
+  US: { name: "United States", taxName: "" },
+  GB: { name: "United Kingdom", taxName: "VAT" },
+  CA: { name: "Canada", taxName: "HST" },
+  AU: { name: "Australia", taxName: "GST" },
+  SG: { name: "Singapore", taxName: "GST" },
+  DE: { name: "Germany", taxName: "VAT" },
+  FR: { name: "France", taxName: "VAT" },
+  AE: { name: "UAE", taxName: "VAT" },
 };
 
 export default function CheckoutPage() {
@@ -31,6 +31,7 @@ export default function CheckoutPage() {
   const [course, setCourse] = useState<PublicCourseDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [country, setCountry] = useState("IN");
+  const [taxRates, setTaxRates] = useState<Record<string, number>>({});
 
   const [cardNumber, setCardNumber] = useState("");
   const [expiry, setExpiry] = useState("");
@@ -65,6 +66,12 @@ export default function CheckoutPage() {
   }, []);
 
   useEffect(() => {
+    getTaxRates()
+      .then((data) => setTaxRates(data.taxRates))
+      .catch(() => { });
+  }, []);
+
+  useEffect(() => {
     if (!course?.coupons?.length || appliedCoupon) return;
     const publicCoupon = course.coupons[0];
     if (publicCoupon.discountType === "FIXED" && publicCoupon.discountValue > Number(course.price)) return;
@@ -78,7 +85,7 @@ export default function CheckoutPage() {
     });
   }, [course]);
 
-  const taxRate = COUNTRIES[country]?.taxRate ?? 0;
+  const taxRate = taxRates[country] ?? 0;
   const subtotal = course ? Number(course.price) : 0;
 
   const discountAmount = appliedCoupon

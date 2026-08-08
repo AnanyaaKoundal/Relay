@@ -25,17 +25,12 @@ export default function SignUpPage() {
       name: form.get("name") as string,
       email: form.get("email") as string,
       password: form.get("password") as string,
+      confirm: form.get("confirmPassword") as string,
     };
 
     const parsed = registerSchema.safeParse(data);
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "Validation failed");
-      return;
-    }
-
-    const confirmPassword = form.get("confirmPassword") as string;
-    if (data.password !== confirmPassword) {
-      setError("Passwords do not match");
       return;
     }
 

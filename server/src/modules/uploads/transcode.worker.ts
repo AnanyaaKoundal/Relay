@@ -199,7 +199,7 @@ export function startTranscodeWorker() {
     {
       connection: { url: process.env.REDIS_URL ?? "redis://localhost:6379" },
       concurrency: 1,
-      lockDuration: 60_000,
+      lockDuration: 1_800_000, // 30 minutes — matches FFmpeg timeout
     },
   );
 

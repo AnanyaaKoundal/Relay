@@ -195,6 +195,8 @@ export async function getOverviewStats(userId: string, range?: string, from?: st
 
     const attention = {
         drafts: statusCounts.get("DRAFT") ?? 0,
+        pendingApproval: 0,
+        rejected: 0,
         unpublishedLessons: unpublishedLessonsCount,
         courses: attentionCourses,
     };
