@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { browseCourses } from "@/services/course.service";
 import type { PublicCourse } from "@/types/course.types";
+import { resolveBannerUrl } from "@/lib/utils";
 import { InstructorHoverCard } from "@/components/learner/instructor-hover-card";
 import { Search, Users } from "lucide-react";
 import { Spinner } from "@/components/shared/spinner";
@@ -39,9 +40,9 @@ function CourseCatalogCard({ course }: { course: PublicCourse }) {
     <Link href={`/courses/${course.id}`} className="group block">
       <div className="overflow-hidden rounded-xl border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
         <div className="relative aspect-video overflow-hidden bg-muted">
-          {course.thumbnailUrl ? (
+          {course.bannerUrl ? (
             <Image
-              src={course.thumbnailUrl}
+              src={resolveBannerUrl(course.bannerUrl) ?? THUMBNAIL}
               alt={course.title}
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -173,11 +174,10 @@ export default function CoursesPage() {
               key={cat}
               type="button"
               onClick={() => setCategory(cat)}
-              className={`inline-flex h-8 items-center rounded-lg px-3 text-xs font-medium transition-colors ${
-                category === cat
+              className={`inline-flex h-8 items-center rounded-lg px-3 text-xs font-medium transition-colors ${category === cat
                   ? "bg-primary text-primary-foreground"
                   : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-              }`}
+                }`}
             >
               {cat}
             </button>
@@ -193,11 +193,10 @@ export default function CoursesPage() {
                 key={d}
                 type="button"
                 onClick={() => setDifficulty(d)}
-                className={`inline-flex h-7 items-center rounded-md px-2.5 text-xs font-medium transition-colors ${
-                  difficulty === d
+                className={`inline-flex h-7 items-center rounded-md px-2.5 text-xs font-medium transition-colors ${difficulty === d
                     ? "bg-foreground text-background"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 {d}
               </button>
@@ -210,11 +209,10 @@ export default function CoursesPage() {
                 key={p}
                 type="button"
                 onClick={() => setPriceFilter(p)}
-                className={`inline-flex h-7 items-center rounded-md px-2.5 text-xs font-medium transition-colors ${
-                  priceFilter === p
+                className={`inline-flex h-7 items-center rounded-md px-2.5 text-xs font-medium transition-colors ${priceFilter === p
                     ? "bg-foreground text-background"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 {p === "all" ? "All" : p === "free" ? "Free" : "Paid"}
               </button>

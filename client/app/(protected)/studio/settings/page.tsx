@@ -3,14 +3,18 @@
 import { useEffect, useState } from "react";
 import { Save, Check } from "lucide-react";
 import { Spinner } from "@/components/shared/spinner";
+import { AvatarUpload } from "@/components/shared/avatar-upload";
 import { InstructorPreview } from "@/components/studio/settings/instructor-preview";
 import { Textarea } from "@/components/ui/textarea";
 import * as studioApi from "@/services/studio.service";
+import { removeAvatar } from "@/services/upload.service";
+import { useAuth } from "@/hooks/useAuth";
 import type { InstructorProfile } from "@/types/studio.types";
 
-const emptyProfile: InstructorProfile = { name: null, email: null, profile: null };
+const emptyProfile: InstructorProfile = { name: null, email: null, avatarUrl: null, profile: null };
 
 export default function StudioSettingsPage() {
+  const { user: authUser, updateUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -25,12 +29,14 @@ export default function StudioSettingsPage() {
   const [linkedin, setLinkedin] = useState("");
   const [github, setGithub] = useState("");
   const [website, setWebsite] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     studioApi
       .getInstructorProfile()
       .then((profile) => {
         setData(profile);
+        setAvatarUrl(profile.avatarUrl ?? null);
         setHeadline(profile.profile?.headline ?? "");
         setBio(profile.profile?.bio ?? "");
         setExpertise(profile.profile?.expertise ?? "");
@@ -118,6 +124,25 @@ export default function StudioSettingsPage() {
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <div className="space-y-5 rounded-xl border bg-card p-5">
           {error && <p className="text-sm text-red-500">{error}</p>}
+
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Avatar</label>
+            <div className="mt-1">
+              <AvatarUpload
+                userId={authUser?.id ?? ""}
+                currentUrl={avatarUrl}
+                onUploadComplete={(url) => {
+                  setAvatarUrl(url);
+                  if (authUser) updateUser({ ...authUser, avatarUrl: url });
+                }}
+                onRemove={async () => {
+                  await removeAvatar();
+                  setAvatarUrl(null);
+                  if (authUser) updateUser({ ...authUser, avatarUrl: null });
+                }}
+              />
+            </div>
+          </div>
 
           <div>
             <label htmlFor="p-headline" className="text-xs font-medium text-muted-foreground">
@@ -235,6 +260,7 @@ export default function StudioSettingsPage() {
           <div className="lg:sticky lg:top-0">
             <InstructorPreview
               profile={data}
+              avatarUrl={avatarUrl}
               headline={headline}
               bio={bio}
               expertise={expertise}

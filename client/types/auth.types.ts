@@ -5,6 +5,7 @@ export type User = {
   isAdmin: boolean;
   isInstructor: boolean;
   phone?: string | null;
+  avatarUrl?: string | null;
   createdAt?: string;
 };
 

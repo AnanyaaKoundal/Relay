@@ -23,11 +23,14 @@ import {
   UserRound,
   LogOut,
 } from "lucide-react";
+import { resolveAvatarUrl } from "@/lib/utils";
 
 export function LearnerNavbar() {
   const { user, logout, isInstructor } = useAuth();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+
+  const avatarUrl = resolveAvatarUrl(user?.avatarUrl);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,15 +106,23 @@ export function LearnerNavbar() {
 
           {/* Avatar menu */}
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary transition-colors outline-none hover:bg-primary/15 cursor-pointer">
-              {initials}
+            <DropdownMenuTrigger className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full ring-2 ring-border ring-offset-2 ring-offset-background transition-shadow hover:ring-primary/50 cursor-pointer">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" className="size-full object-cover" />
+              ) : (
+                initials
+              )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" sideOffset={8} className="w-60 p-1.5">
               <DropdownMenuGroup>
                 <DropdownMenuLabel className="p-0">
                   <div className="flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-2.5">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                      {initials}
+                    <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full ring-2 ring-border ring-offset-2 text-sm font-semibold text-primary">
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt="" className="size-full object-cover" />
+                      ) : (
+                        initials
+                      )}
                     </div>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-foreground">

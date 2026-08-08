@@ -12,6 +12,28 @@ export function resolveUrl(path: string | null | undefined): string | null {
   return `${API_URL}${path}`;
 }
 
+export function resolveBannerUrl(
+  bannerBasePath: string | null | undefined,
+  size: 400 | 800 | 1280 = 800,
+): string | null {
+  if (!bannerBasePath) return null;
+  if (bannerBasePath.startsWith("http")) return bannerBasePath;
+  const [path, query] = bannerBasePath.split("?");
+  const base = `/s3/${path}-${size}.webp`;
+  return query ? `${base}?${query}` : base;
+}
+
+export function resolveAvatarUrl(
+  avatarBasePath: string | null | undefined,
+  size: 128 | 256 | 512 = 256,
+): string | null {
+  if (!avatarBasePath) return null;
+  if (avatarBasePath.startsWith("http")) return avatarBasePath;
+  const [path, query] = avatarBasePath.split("?");
+  const base = `/s3/${path}-${size}.webp`;
+  return query ? `${base}?${query}` : base;
+}
+
 export function formatDuration(seconds: number | null): string {
   if (!seconds) return "";
   const m = Math.floor(seconds / 60);

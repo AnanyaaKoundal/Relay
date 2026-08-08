@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { Save, Check } from "lucide-react";
 import { Spinner } from "@/components/shared/spinner";
+import { AvatarUpload } from "@/components/shared/avatar-upload";
 import { useAuth } from "@/hooks/useAuth";
 import { getCurrentUser, updateProfile } from "@/services/auth.service";
+import { removeAvatar } from "@/services/upload.service";
 
 export function ProfileForm() {
-  const { updateUser } = useAuth();
+  const { user: authUser, updateUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -15,6 +17,7 @@ export function ProfileForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     getCurrentUser()
@@ -22,6 +25,7 @@ export function ProfileForm() {
         setName(user.name);
         setEmail(user.email);
         setPhone(user.phone ?? "");
+        setAvatarUrl(user.avatarUrl ?? null);
         updateUser(user);
       })
       .catch(() => setError("Failed to load your profile"))
@@ -70,6 +74,25 @@ export function ProfileForm() {
 
       <div className="mt-5 space-y-5">
         {error && <p className="text-sm text-red-500">{error}</p>}
+
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">Avatar</label>
+          <div className="mt-1">
+            <AvatarUpload
+              userId={authUser?.id ?? ""}
+              currentUrl={avatarUrl}
+              onUploadComplete={(url) => {
+                setAvatarUrl(url);
+                if (authUser) updateUser({ ...authUser, avatarUrl: url });
+              }}
+              onRemove={async () => {
+                await removeAvatar();
+                setAvatarUrl(null);
+                if (authUser) updateUser({ ...authUser, avatarUrl: null });
+              }}
+            />
+          </div>
+        </div>
 
         <div>
           <label htmlFor="p-name" className="text-xs font-medium text-muted-foreground">

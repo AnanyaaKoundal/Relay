@@ -59,6 +59,7 @@ export async function onboard(userId: string, data: OnboardData) {
 const PROFILE_SELECT = {
   name: true,
   email: true,
+  avatarUrl: true,
   profile: true,
 } as const;
 

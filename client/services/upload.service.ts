@@ -59,13 +59,14 @@ export async function uploadFileWithProgress(
   uploadUrl: string,
   file: File,
   onProgress: (percent: number) => void,
+  proxyPath: string = "/uploads/proxy",
 ): Promise<void> {
   let lastError;
   const attempts = 3;
   for (let i = 0; i < attempts; i++) {
     try {
       return new Promise((resolve, reject) => {
-        const proxyUrl = `${proxyBaseUrl}/uploads/proxy?url=${encodeURIComponent(uploadUrl)}`;
+        const proxyUrl = `${proxyBaseUrl}${proxyPath}?url=${encodeURIComponent(uploadUrl)}`;
         const xhr = new XMLHttpRequest();
         xhr.open("PUT", proxyUrl);
         xhr.setRequestHeader("Content-Type", file.type);
@@ -96,4 +97,54 @@ export async function uploadFileWithProgress(
     }
   }
   throw lastError;
+}
+
+// ─── Banner Upload ────────────────────────────────────────────
+
+export type BannerPresignResponse = {
+  size: number;
+  uploadUrl: string;
+  fileKey: string;
+};
+
+export async function presignBanner(courseId: string): Promise<BannerPresignResponse[]> {
+  return request<BannerPresignResponse[]>("/uploads/presign-banner", {
+    method: "POST",
+    body: JSON.stringify({ courseId }),
+  });
+}
+
+export async function saveBanner(courseId: string, bannerUrl: string): Promise<{ message: string }> {
+  return request<{ message: string }>("/uploads/save-banner", {
+    method: "POST",
+    body: JSON.stringify({ courseId, bannerUrl }),
+  });
+}
+
+// ─── Avatar Upload ────────────────────────────────────────────
+
+export type AvatarPresignResponse = {
+  size: number;
+  uploadUrl: string;
+  fileKey: string;
+};
+
+export async function presignAvatar(): Promise<AvatarPresignResponse[]> {
+  return request<AvatarPresignResponse[]>("/auth/presign-avatar", {
+    method: "POST",
+  });
+}
+
+export async function saveAvatar(avatarUrl: string): Promise<{ message: string }> {
+  return request<{ message: string }>("/auth/save-avatar", {
+    method: "POST",
+    body: JSON.stringify({ avatarUrl }),
+  });
+}
+
+export async function removeAvatar(): Promise<{ message: string }> {
+  return request<{ message: string }>("/auth/save-avatar", {
+    method: "POST",
+    body: JSON.stringify({ avatarUrl: null }),
+  });
 }

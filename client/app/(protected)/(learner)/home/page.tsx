@@ -121,7 +121,7 @@ export default function HomePage() {
                     id={enrollment.course.id}
                     title={enrollment.course.title}
                     instructor={enrollment.course.instructor?.name}
-                    thumbnail={enrollment.course.thumbnailUrl}
+                    thumbnail={enrollment.course.bannerUrl}
                     progress={enrollment.progressPercent}
                     learnHref={`/courses/${enrollment.course.id}/learn`}
                     lastLesson={
@@ -158,7 +158,7 @@ export default function HomePage() {
                   id={course.id}
                   title={course.title}
                   instructor={course.instructor?.name}
-                  thumbnail={course.thumbnailUrl}
+                  thumbnail={course.bannerUrl}
                   price={Number(course.price)}
                   promo={course.promo}
                   showContinue={false}

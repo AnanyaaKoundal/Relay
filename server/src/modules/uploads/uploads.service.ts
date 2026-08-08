@@ -9,6 +9,95 @@ import queue from "./transcode.queue.js";
 
 const PRESIGN_EXPIRY = 15 * 60;
 
+// ─── Banner Upload ────────────────────────────────────────────
+
+const BANNER_SIZES = [400, 800, 1280];
+
+export async function generateBannerPresignedUrls(
+  instructorId: string,
+  courseId: string,
+) {
+  const course = await prisma.course.findFirst({
+    where: { id: courseId, instructorId },
+    select: { id: true },
+  });
+  if (!course) throw new AppError("Course not found", 404);
+
+  const results = await Promise.all(
+    BANNER_SIZES.map(async (size) => {
+      const fileKey = `course-banner/${courseId}/banner-${size}.webp`;
+
+      const command = new PutObjectCommand({
+        Bucket: S3_BUCKET,
+        Key: fileKey,
+        ContentType: "image/webp",
+      });
+
+      const uploadUrl = await getSignedUrl(s3, command, {
+        expiresIn: PRESIGN_EXPIRY,
+      });
+
+      return { size, uploadUrl, fileKey };
+    }),
+  );
+
+  return results;
+}
+
+export async function saveBannerUrl(
+  instructorId: string,
+  courseId: string,
+  bannerUrl: string,
+) {
+  const course = await prisma.course.findFirst({
+    where: { id: courseId, instructorId },
+    select: { id: true },
+  });
+  if (!course) throw new AppError("Course not found", 404);
+
+  await prisma.course.update({
+    where: { id: courseId },
+    data: { bannerUrl },
+  });
+
+  return { message: "Banner URL saved" };
+}
+
+// ─── Avatar Upload ────────────────────────────────────────────
+
+const AVATAR_SIZES = [128, 256, 512];
+
+export async function generateAvatarPresignedUrls(userId: string) {
+  const results = await Promise.all(
+    AVATAR_SIZES.map(async (size) => {
+      const fileKey = `avatars/${userId}/avatar-${size}.webp`;
+
+      const command = new PutObjectCommand({
+        Bucket: S3_BUCKET,
+        Key: fileKey,
+        ContentType: "image/webp",
+      });
+
+      const uploadUrl = await getSignedUrl(s3, command, {
+        expiresIn: PRESIGN_EXPIRY,
+      });
+
+      return { size, uploadUrl, fileKey };
+    }),
+  );
+
+  return results;
+}
+
+export async function saveAvatarUrl(userId: string, avatarUrl: string | null) {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { avatarUrl },
+  });
+
+  return { message: "Avatar URL saved" };
+}
+
 export async function generatePresignedUrl(
   instructorId: string,
   lessonId: string,

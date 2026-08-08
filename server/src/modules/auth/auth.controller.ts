@@ -14,6 +14,7 @@ const COOKIE_OPTIONS = {
 
 export const getMe = wrap(async (req: Request, res: Response) => {
   const user = await authService.getCurrentUser(req.user!.userId);
+  res.setHeader("Cache-Control", "no-store");
   res.json(user);
 });
 

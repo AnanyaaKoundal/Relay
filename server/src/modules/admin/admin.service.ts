@@ -287,7 +287,7 @@ export async function getCourseDetail(courseId: string) {
       description: true,
       status: true,
       price: true,
-      thumbnailUrl: true,
+      bannerUrl: true,
       difficulty: true,
       createdAt: true,
       updatedAt: true,
@@ -704,7 +704,7 @@ export async function getSettings() {
 
 export async function updateSettings(input: UpdateSettingsInput) {
   const current = await getSettings() as Record<string, unknown>;
-  
+
   const updated = {
     ...current,
     ...Object.fromEntries(Object.entries(input).filter(([, v]) => v !== undefined)),

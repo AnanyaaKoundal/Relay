@@ -8,6 +8,7 @@ import {
   getPublicCourse,
 } from "@/services/course.service";
 import type { PublicCourseDetail } from "@/types/course.types";
+import { resolveBannerUrl } from "@/lib/utils";
 import {
   checkEnrollment,
   enrollInCourse,
@@ -96,9 +97,9 @@ export default function CourseDetailPage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <div className="space-y-4">
           <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-muted">
-            {course.thumbnailUrl ? (
+            {course.bannerUrl ? (
               <Image
-                src={course.thumbnailUrl}
+                src={resolveBannerUrl(course.bannerUrl) ?? "/thumbnail.avif"}
                 alt={course.title}
                 fill
                 className="object-cover"
@@ -190,11 +191,10 @@ export default function CourseDetailPage() {
                 href={`/courses/${slug}/checkout`}
                 className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
               >
-                Purchase{course.coupons?.[0] ? ` — ₹${
-                  course.coupons[0].discountType === "PERCENTAGE"
+                Purchase{course.coupons?.[0] ? ` — ₹${course.coupons[0].discountType === "PERCENTAGE"
                     ? Number(course.price) - Math.round(Number(course.price) * course.coupons[0].discountValue / 100)
                     : Math.max(0, Number(course.price) - course.coupons[0].discountValue)
-                }` : ` — ₹${course.price}`}
+                  }` : ` — ₹${course.price}`}
                 <ArrowRight className="size-4" />
               </Link>
             ) : (

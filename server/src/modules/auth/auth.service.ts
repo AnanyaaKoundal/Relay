@@ -31,7 +31,7 @@ export async function register(data: {
 
   const user = await prisma.user.create({
     data: { name: data.name, email: data.email, passwordHash },
-    select: { id: true, name: true, email: true, isAdmin: true, isInstructor: true },
+    select: { id: true, name: true, email: true, isAdmin: true, isInstructor: true, avatarUrl: true },
   });
 
   const token = signToken({
@@ -64,7 +64,7 @@ export async function login(data: { email: string; password: string }) {
   });
 
   return {
-    user: { id: user.id, name: user.name, email: user.email, isAdmin: user.isAdmin, isInstructor: user.isInstructor },
+    user: { id: user.id, name: user.name, email: user.email, isAdmin: user.isAdmin, isInstructor: user.isInstructor, avatarUrl: user.avatarUrl },
     token,
   };
 }
@@ -73,7 +73,7 @@ export async function updateProfile(userId: string, data: { name: string; phone?
   const user = await prisma.user.update({
     where: { id: userId },
     data: { name: data.name, phone: data.phone ?? null },
-    select: { id: true, name: true, email: true, isAdmin: true, isInstructor: true, phone: true, createdAt: true },
+    select: { id: true, name: true, email: true, isAdmin: true, isInstructor: true, phone: true, createdAt: true, avatarUrl: true },
   });
 
   return user;
@@ -97,7 +97,7 @@ export async function changePassword(userId: string, data: { currentPassword: st
 export async function getCurrentUser(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, name: true, email: true, isAdmin: true, isInstructor: true, phone: true, createdAt: true },
+    select: { id: true, name: true, email: true, isAdmin: true, isInstructor: true, phone: true, createdAt: true, avatarUrl: true },
   });
 
   if (!user) {

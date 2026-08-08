@@ -20,7 +20,7 @@ export function ContinueLearningSection({
                 id={enrollment.course.id}
                 title={enrollment.course.title}
                 instructor={enrollment.course.instructor?.name}
-                thumbnail={enrollment.course.thumbnailUrl}
+                thumbnail={enrollment.course.bannerUrl}
                 progress={enrollment.progressPercent}
                 learnHref={`/courses/${enrollment.course.id}/learn`}
                 lastLesson={

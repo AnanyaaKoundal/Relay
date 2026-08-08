@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Play } from "lucide-react";
+import { resolveBannerUrl } from "@/lib/utils";
 import type { Promo } from "@/types/course.types";
 
 type CourseCardProps = {
@@ -37,6 +38,7 @@ export function CourseCard({
   learnHref,
 }: CourseCardProps) {
   const href = learnHref ?? (slug ? `/learn/${slug}` : `/courses/${id}`);
+  const resolvedThumbnail = resolveBannerUrl(thumbnail);
   const isEnrolled = progress !== undefined;
   const hasProgress = isEnrolled && progress > 0;
 
@@ -53,9 +55,9 @@ export function CourseCard({
       <div className="overflow-hidden rounded-xl border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
         {/* Thumbnail */}
         <div className="relative aspect-video overflow-hidden bg-muted">
-          {thumbnail ? (
+          {resolvedThumbnail ? (
             <Image
-              src={thumbnail}
+              src={resolvedThumbnail}
               alt={title}
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"

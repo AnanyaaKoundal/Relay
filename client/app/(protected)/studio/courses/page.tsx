@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getMyCourses, deleteCourse } from "@/services/course.service";
 import { useConfirm } from "@/components/shared/confirm-modal";
+import { resolveBannerUrl } from "@/lib/utils";
 import type { CourseListItem } from "@/types/course.types";
 import {
   Plus,
@@ -30,7 +31,7 @@ export default function StudioCoursesPage() {
   useEffect(() => {
     getMyCourses()
       .then(setCourses)
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, []);
 
@@ -94,19 +95,17 @@ export default function StudioCoursesPage() {
             key={tab.value}
             type="button"
             onClick={() => setFilter(tab.value)}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm border-b-2 transition-colors ${
-              filter === tab.value
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm border-b-2 transition-colors ${filter === tab.value
                 ? "border-primary text-foreground font-medium"
                 : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
+              }`}
           >
             {tab.label}
             <span
-              className={`text-xs px-1.5 py-0.5 rounded-full ${
-                filter === tab.value
+              className={`text-xs px-1.5 py-0.5 rounded-full ${filter === tab.value
                   ? "bg-primary/10 text-primary"
                   : "bg-muted text-muted-foreground"
-              }`}
+                }`}
             >
               {tab.count}
             </span>
@@ -163,11 +162,11 @@ export default function StudioCoursesPage() {
                 {/* Thumbnail */}
                 <Link
                   href={`/studio/courses/${course.id}/edit`}
-                  className="relative size-16 sm:size-20 shrink-0 overflow-hidden rounded-lg bg-muted"
+                  className="relative w-20 shrink-0 overflow-hidden rounded-lg bg-muted aspect-video"
                 >
-                  {course.thumbnailUrl ? (
+                  {course.bannerUrl ? (
                     <Image
-                      src={course.thumbnailUrl}
+                      src={resolveBannerUrl(course.bannerUrl) ?? "/thumbnail.avif"}
                       alt=""
                       fill
                       className="object-cover"

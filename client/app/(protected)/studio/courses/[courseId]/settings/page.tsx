@@ -147,6 +147,7 @@ export default function CourseSettingsPage() {
 
         {tab === "details" && (
           <DetailsTab
+            courseId={params.courseId!}
             title={title}
             setTitle={setTitle}
             description={description}
@@ -155,8 +156,8 @@ export default function CourseSettingsPage() {
             setCategory={setCategory}
             difficulty={difficulty}
             setDifficulty={setDifficulty}
-            thumbnailUrl={thumbnailUrl}
-            setThumbnailUrl={setThumbnailUrl}
+            bannerUrl={bannerUrl}
+            setBannerUrl={setBannerUrl}
           />
         )}
 

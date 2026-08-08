@@ -13,7 +13,7 @@ export function CoursesGrid({ enrollments }: { enrollments: Enrollment[] }) {
             id={enrollment.course.id}
             title={enrollment.course.title}
             instructor={enrollment.course.instructor?.name}
-            thumbnail={enrollment.course.thumbnailUrl}
+            thumbnail={enrollment.course.bannerUrl}
             progress={enrollment.progressPercent}
             learnHref={`/courses/${enrollment.course.id}/learn`}
             lastLesson={total > 0 ? `${completed}/${total} lessons` : undefined}

@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { FilterSelect } from "@/components/shared/filter-select";
+import { ImageCropUpload } from "@/components/shared/image-crop-upload";
 import { getCategories, type Category } from "@/services/studio.service";
 
 interface Props {
+  courseId: string;
   title: string;
   setTitle: (v: string) => void;
   description: string;
@@ -19,6 +21,7 @@ interface Props {
 }
 
 export function DetailsTab({
+  courseId,
   title, setTitle,
   description, setDescription,
   category, setCategory,
@@ -84,13 +87,11 @@ export function DetailsTab({
       </div>
 
       <div>
-        <label htmlFor="s-thumb" className="text-xs font-medium text-muted-foreground">Banner URL</label>
-        <input
-          id="s-thumb"
-          value={bannerUrl}
-          onChange={(e) => setBannerUrl(e.target.value)}
-          placeholder="https://..."
-          className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+        <label className="text-xs font-medium text-muted-foreground">Course Banner</label>
+        <ImageCropUpload
+          courseId={courseId}
+          currentUrl={bannerUrl}
+          onUploadComplete={setBannerUrl}
         />
       </div>
     </>

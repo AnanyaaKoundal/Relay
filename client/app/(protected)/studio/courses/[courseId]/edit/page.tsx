@@ -6,6 +6,7 @@ import Link from "next/link";
 import * as courseApi from "@/services/course.service";
 import * as lessonApi from "@/services/lesson.service";
 import { useConfirm } from "@/components/shared/confirm-modal";
+import { resolveBannerUrl } from "@/lib/utils";
 import { useProcessingPolling } from "@/hooks/useProcessingPolling";
 import { useCourseActions } from "@/hooks/useCourseActions";
 import { VideoLessonEditor } from "@/components/studio/VideoLessonEditor";
@@ -242,10 +243,10 @@ export default function CourseBuilderWorkspace() {
       />
 
       {/* Course Banner */}
-      <div className="rounded-xl border bg-card flex overflow-hidden h-60">
-        <div className="relative w-1/2 shrink-0 bg-muted">
+      <div className="rounded-xl border bg-card flex overflow-hidden">
+        <div className="relative w-1/2 shrink-0 bg-muted aspect-video">
           <Image
-            src={course.thumbnailUrl || "/thumbnail.avif"}
+            src={resolveBannerUrl(course.bannerUrl) ?? "/thumbnail.avif"}
             alt={course.title}
             fill
             className="object-cover"

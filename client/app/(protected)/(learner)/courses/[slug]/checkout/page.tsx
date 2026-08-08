@@ -7,6 +7,7 @@ import Link from "next/link";
 import { getPublicCourse } from "@/services/course.service";
 import { purchaseCourse, getCountry, validateCoupon } from "@/services/payment.service";
 import type { PublicCourseDetail } from "@/types/course.types";
+import { resolveBannerUrl } from "@/lib/utils";
 import { Loader2, CreditCard, Lock, Ticket } from "lucide-react";
 import { PurchaseResponse, ValidateCouponResult } from "@/types/payment.types";
 
@@ -335,7 +336,7 @@ export default function CheckoutPage() {
           <div className="rounded-xl border bg-card p-4 space-y-3">
             <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted">
               <Image
-                src={course.thumbnailUrl || "/thumbnail.avif"}
+                src={resolveBannerUrl(course.bannerUrl) ?? "/thumbnail.avif"}
                 alt={course.title}
                 fill
                 className="object-cover"

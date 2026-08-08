@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import { resolveAvatarUrl } from "@/lib/utils";
 
 const sidebarItems = [
   { label: "Overview", href: "/studio/overview", icon: "LayoutDashboard" },
@@ -36,7 +37,7 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? "w-56" : "w-0"} transition-all duration-200 border-r bg-card overflow-hidden flex flex-col`}>
+      <aside className={`${sidebarOpen ? "w-56" : "w-0"} sticky top-0 h-screen transition-all duration-200 border-r bg-card overflow-hidden flex flex-col`}>
         <div className="flex h-14 items-center border-b px-4">
           <Link href="/studio/overview" className="text-sm font-semibold tracking-tight">Studio</Link>
         </div>
@@ -71,7 +72,7 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
       {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="flex h-14 items-center justify-between border-b px-6">
+        <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background/80 backdrop-blur-lg px-6">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -90,8 +91,12 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
             >
               Create Course
             </Link>
-            <div className="size-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground">
-              {user.name?.charAt(0)?.toUpperCase() ?? "U"}
+            <div className="size-8 shrink-0 overflow-hidden rounded-full ring-2 ring-border ring-offset-2 flex items-center justify-center text-xs font-medium text-muted-foreground">
+              {resolveAvatarUrl(user.avatarUrl) ? (
+                <img src={resolveAvatarUrl(user.avatarUrl)!} alt="" className="size-full object-cover" />
+              ) : (
+                user.name?.charAt(0)?.toUpperCase() ?? "U"
+              )}
             </div>
           </div>
         </header>

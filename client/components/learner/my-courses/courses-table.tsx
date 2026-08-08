@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { CheckCircle2, Play } from "lucide-react";
+import { resolveBannerUrl } from "@/lib/utils";
 import type { Enrollment } from "@/types/enrollment.types";
 import type { SortKey } from "./types";
 import { SortHeader } from "./sort-header";
@@ -55,7 +56,7 @@ export function CoursesTable({
                   >
                     <div className="relative size-12 shrink-0 overflow-hidden rounded-md bg-muted">
                       <Image
-                        src={enrollment.course.thumbnailUrl ?? "/thumbnail.avif"}
+                        src={resolveBannerUrl(enrollment.course.bannerUrl) ?? "/thumbnail.avif"}
                         alt={enrollment.course.title}
                         fill
                         sizes="48px"
@@ -85,11 +86,10 @@ export function CoursesTable({
                 </td>
                 <td className="px-4 py-3">
                   <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-                      completedCourse
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${completedCourse
                         ? "bg-emerald-500/10 text-emerald-600"
                         : "bg-primary/10 text-primary"
-                    }`}
+                      }`}
                   >
                     {completedCourse ? (
                       <CheckCircle2 className="size-3" />

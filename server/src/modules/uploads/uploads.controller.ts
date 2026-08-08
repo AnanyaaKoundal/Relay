@@ -3,6 +3,58 @@ import * as uploadsService from "./uploads.service.js";
 import { wrap } from "../../middleware/wrap.js";
 import { logger } from "../../utils/logger.js";
 
+// ─── Banner Upload ────────────────────────────────────────────
+
+export const presignBanner = wrap(async (req: Request, res: Response) => {
+  const { courseId } = req.body ?? {};
+
+  if (!courseId) {
+    res.status(400).json({ error: "courseId is required" });
+    return;
+  }
+
+  const result = await uploadsService.generateBannerPresignedUrls(
+    req.user!.userId,
+    courseId,
+  );
+  res.json(result);
+});
+
+export const saveBanner = wrap(async (req: Request, res: Response) => {
+  const { courseId, bannerUrl } = req.body ?? {};
+
+  if (!courseId || !bannerUrl) {
+    res.status(400).json({ error: "courseId and bannerUrl are required" });
+    return;
+  }
+
+  const result = await uploadsService.saveBannerUrl(
+    req.user!.userId,
+    courseId,
+    bannerUrl,
+  );
+  res.json(result);
+});
+
+// ─── Avatar Upload ────────────────────────────────────────────
+
+export const presignAvatar = wrap(async (req: Request, res: Response) => {
+  const result = await uploadsService.generateAvatarPresignedUrls(
+    req.user!.userId,
+  );
+  res.json(result);
+});
+
+export const saveAvatar = wrap(async (req: Request, res: Response) => {
+  const { avatarUrl } = req.body ?? {};
+
+  const result = await uploadsService.saveAvatarUrl(
+    req.user!.userId,
+    avatarUrl ?? null,
+  );
+  res.json(result);
+});
+
 export const presignUpload = wrap(async (req: Request, res: Response) => {
   const { fileName, fileType, lessonId } = req.body ?? {};
 
@@ -43,16 +95,21 @@ export const proxyUpload = wrap(async (req: Request, res: Response) => {
     return;
   }
 
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) {
+    chunks.push(Buffer.from(chunk));
+  }
+  const body = Buffer.concat(chunks);
+
   const headers: Record<string, string> = {};
   if (req.headers["content-type"]) headers["Content-Type"] = req.headers["content-type"];
-  if (req.headers["content-length"]) headers["Content-Length"] = req.headers["content-length"];
+  if (body.length) headers["Content-Length"] = String(body.length);
 
   const response = await fetch(targetUrl, {
     method: "PUT",
     headers,
-    body: req as unknown as BodyInit,
-    duplex: "half",
-  } as RequestInit);
+    body,
+  });
 
   if (!response.ok) {
     const text = await response.text();

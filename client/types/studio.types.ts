@@ -14,6 +14,7 @@ export type InstructorProfileData = {
 export type InstructorProfile = {
   name: string | null;
   email: string | null;
+  avatarUrl: string | null;
   profile: InstructorProfileData | null;
 };
 

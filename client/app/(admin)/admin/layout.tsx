@@ -63,7 +63,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="flex-1 flex flex-col min-w-0">
         <header className="flex h-14 items-center justify-end border-b px-6">
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary transition-colors outline-none hover:bg-primary/15 cursor-pointer">
+            <DropdownMenuTrigger className="flex size-8 items-center justify-center overflow-hidden rounded-full ring-2 ring-border ring-offset-2 text-xs font-semibold text-primary transition-shadow hover:ring-primary/50 cursor-pointer">
               {initials}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" sideOffset={8} className="w-48 p-1.5">

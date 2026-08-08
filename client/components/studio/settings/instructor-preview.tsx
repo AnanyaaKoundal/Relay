@@ -2,10 +2,12 @@
 
 import { AtSign, Link, Code, Globe } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { resolveAvatarUrl } from "@/lib/utils";
 import type { InstructorProfile } from "@/types/studio.types";
 
 type PreviewProps = {
   profile: InstructorProfile;
+  avatarUrl: string | null;
   headline: string;
   bio: string;
   expertise: string;
@@ -24,6 +26,7 @@ const SOCIALS: { key: "twitter" | "linkedin" | "github" | "website"; icon: Lucid
 
 export function InstructorPreview({
   profile,
+  avatarUrl,
   headline,
   bio,
   expertise,
@@ -32,6 +35,7 @@ export function InstructorPreview({
   github,
   website,
 }: PreviewProps) {
+  const resolvedAvatar = resolveAvatarUrl(avatarUrl);
   const initial = profile.name?.charAt(0)?.toUpperCase() ?? "U";
   const expertiseTags = expertise
     .split(",")
@@ -50,8 +54,12 @@ export function InstructorPreview({
   return (
     <div className="rounded-xl border bg-card p-6">
       <div className="flex items-center gap-4">
-        <div className="flex size-14 items-center justify-center rounded-full bg-chart-1/10 text-lg font-semibold text-chart-1">
-          {initial}
+        <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full ring-2 ring-border ring-offset-2 text-lg font-semibold text-chart-1">
+          {resolvedAvatar ? (
+            <img src={resolvedAvatar} alt="" className="size-full object-cover" />
+          ) : (
+            initial
+          )}
         </div>
         <div className="min-w-0">
           <p className="truncate text-base font-semibold">{profile.name ?? "Instructor"}</p>
