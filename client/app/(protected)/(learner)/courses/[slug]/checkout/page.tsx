@@ -78,7 +78,6 @@ export default function CheckoutPage() {
     setCouponCode(publicCoupon.code);
     setAppliedCoupon({
       valid: true,
-      couponId: publicCoupon.id,
       discountType: publicCoupon.discountType,
       discountValue: publicCoupon.discountValue,
       label: publicCoupon.label,

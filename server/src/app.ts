@@ -15,9 +15,13 @@ import adminRoutes from "./modules/admin/admin.routes.js";
 import { requestLogger } from "./middleware/request-logger.js";
 import { errorHandler } from "./middleware/error-handler.js";
 
+if (!process.env.CLIENT_URL) {
+  throw new Error("CLIENT_URL environment variable is required");
+}
+
 const app = express();
 
-app.use(cors({ origin: process.env.CLIENT_URL ?? "http://localhost:3000", credentials: true }));
+app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(requestLogger);

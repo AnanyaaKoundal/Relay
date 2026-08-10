@@ -153,7 +153,6 @@ export async function getPublicCourse(slug: string) {
       coupons: {
         where: { isPublic: true, isActive: true },
         select: {
-          id: true,
           code: true,
           discountType: true,
           discountValue: true,
@@ -181,7 +180,6 @@ export async function getPublicCourse(slug: string) {
       return true;
     })
     .map((c) => ({
-      id: c.id,
       code: c.code,
       discountType: c.discountType,
       discountValue: Number(c.discountValue),

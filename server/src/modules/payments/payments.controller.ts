@@ -72,5 +72,6 @@ export const checkCoupon = wrap(async (req: Request, res: Response) => {
 
   const subtotal = req.query.subtotal !== undefined ? Number(req.query.subtotal) : undefined;
   const result = await validateCoupon(code, courseId, subtotal);
-  res.json({ valid: true, ...result });
+  const { couponId: _, ...safeResult } = result;
+  res.json({ valid: true, ...safeResult });
 });

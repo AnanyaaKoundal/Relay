@@ -10,7 +10,6 @@ export interface PurchaseRequest {
 
 export interface ValidateCouponResult {
     valid: boolean;
-    couponId: string;
     discountType: "PERCENTAGE" | "FIXED";
     discountValue: number;
     label: string | null;
