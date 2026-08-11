@@ -99,12 +99,17 @@ function runFfmpeg(input: string, outputDir: string, quality: (typeof QUALITIES)
         "-hls_segment_filename", join(outputDir, "segment_%03d.ts"),
         outputPath,
       ],
-      { timeout: 30 * 60 * 1000 },
+      { timeout: 30 * 60 * 1000, maxBuffer: 50 * 1024 * 1024 },
     );
+
+    let stderr = "";
+    proc.stderr?.on("data", (chunk: Buffer) => {
+      stderr += chunk.toString();
+    });
 
     proc.on("close", (code) => {
       if (code === 0) resolve();
-      else reject(new Error(`FFmpeg exited with code ${code}`));
+      else reject(new Error(`FFmpeg exited with code ${code}: ${stderr.slice(-500)}`));
     });
     proc.on("error", reject);
   });
@@ -122,6 +127,15 @@ function buildMasterPlaylist(qualities: { label: string; dir: string }[]): strin
 }
 
 async function transcode(job: Job<TranscodeJobData>) {
+  const lesson = await prisma.lesson.findUnique({
+    where: { id: job.data.lessonId },
+    select: { id: true },
+  });
+  if (!lesson) {
+    logger.warn(`Lesson ${job.data.lessonId} no longer exists — skipping transcode`);
+    return;
+  }
+
   const tmpId = randomUUID();
   const workDir = join(tmpdir(), `relay-transcode-${tmpId}`);
   const inputPath = join(workDir, "input.mp4");
@@ -139,8 +153,10 @@ async function transcode(job: Job<TranscodeJobData>) {
     for (const q of QUALITIES) {
       const outDir = join(hlsDir, q.label);
       await mkdir(outDir, { recursive: true });
-      logger.info(`Transcoding ${q.label}`);
+      logger.info(`Transcoding ${q.label}...`);
+      const start = Date.now();
       await runFfmpeg(inputPath, outDir, q);
+      logger.info(`Transcoding ${q.label} done in ${((Date.now() - start) / 1000).toFixed(1)}s`);
       qualityDirs.push({ label: q.label, dir: outDir });
     }
 
