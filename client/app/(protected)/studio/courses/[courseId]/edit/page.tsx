@@ -139,7 +139,7 @@ export default function CourseBuilderWorkspace() {
   }, [params?.courseId]);
 
   /* ── Auto-poll PROCESSING/PENDING lessons ── */
-  const { markSaved } = useProcessingPolling(params!.courseId, chapters, setChapters);
+  const { markSaved } = useProcessingPolling(params!.courseId, chapters, setChapters, !!editorLesson);
 
   /* ── Course publish/save actions (extracted) ── */
   const {

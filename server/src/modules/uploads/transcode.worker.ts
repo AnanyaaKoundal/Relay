@@ -1,6 +1,5 @@
-import { Worker, Job } from "bullmq";
-import { execFile } from "child_process";
-import { promisify } from "util";
+import { Worker, Job, Queue } from "bullmq";
+import { spawn } from "child_process";
 import { readFile, unlink, mkdir, writeFile } from "fs/promises";
 import { join, relative as pathRelative } from "path";
 import { tmpdir } from "os";
@@ -14,7 +13,6 @@ import s3, { S3_BUCKET } from "../../lib/s3.js";
 import { prisma } from "../../lib/prisma.js";
 import { logger } from "../../utils/logger.js";
 
-const execFileAsync = promisify(execFile);
 const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 const QUALITIES = [
@@ -62,27 +60,33 @@ async function uploadDir(localDir: string, s3Prefix: string): Promise<void> {
   }
 
   const allFiles = walkDir(localDir);
-  await Promise.all(
-    allFiles.map(async (filePath) => {
-      const relative = pathRelative(localDir, filePath).replace(/\\/g, "/");
-      const key = `${s3Prefix}${relative}`;
-      const body = await readFile(filePath);
-      const contentType = filePath.endsWith(".m3u8")
-        ? "application/vnd.apple.mpegurl"
-        : filePath.endsWith(".ts")
-          ? "video/mp2t"
-          : "application/octet-stream";
+  const BATCH_SIZE = 25;
 
-      logger.info(`Uploading ${key} (${body.length} bytes)`);
-      await s3.send(new PutObjectCommand({ Bucket: S3_BUCKET, Key: key, Body: body, ContentType: contentType }));
-    }),
-  );
+  for (let i = 0; i < allFiles.length; i += BATCH_SIZE) {
+    const batch = allFiles.slice(i, i + BATCH_SIZE);
+    await Promise.all(
+      batch.map(async (filePath) => {
+        const relative = pathRelative(localDir, filePath).replace(/\\/g, "/");
+        const key = `${s3Prefix}${relative}`;
+        const body = await readFile(filePath);
+        const contentType = filePath.endsWith(".m3u8")
+          ? "application/vnd.apple.mpegurl"
+          : filePath.endsWith(".ts")
+            ? "video/mp2t"
+            : "application/octet-stream";
+
+        logger.info(`Uploading ${key} (${body.length} bytes)`);
+        await s3.send(new PutObjectCommand({ Bucket: S3_BUCKET, Key: key, Body: body, ContentType: contentType }));
+      }),
+    );
+    logger.info(`Uploaded batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(allFiles.length / BATCH_SIZE)} (${allFiles.length} files total)`);
+  }
 }
 
 function runFfmpeg(input: string, outputDir: string, quality: (typeof QUALITIES)[number]): Promise<void> {
   return new Promise((resolve, reject) => {
     const outputPath = join(outputDir, "index.m3u8");
-    const proc = execFile(
+    const proc = spawn(
       ffmpegPath,
       [
         "-i", input,
@@ -99,19 +103,43 @@ function runFfmpeg(input: string, outputDir: string, quality: (typeof QUALITIES)
         "-hls_segment_filename", join(outputDir, "segment_%03d.ts"),
         outputPath,
       ],
-      { timeout: 30 * 60 * 1000, maxBuffer: 50 * 1024 * 1024 },
+      { timeout: 30 * 60 * 1000 },
     );
 
-    let stderr = "";
-    proc.stderr?.on("data", (chunk: Buffer) => {
-      stderr += chunk.toString();
+    let lastLine = "";
+    let lineCount = 0;
+
+    proc.stderr.on("data", (chunk: Buffer) => {
+      const text = chunk.toString();
+      const lines = text.split("\r").filter(Boolean);
+      for (const line of lines) {
+        if (line.trim()) {
+          lastLine = line.trim();
+          lineCount++;
+        }
+      }
     });
 
+    // Log progress every 15 seconds
+    const progressInterval = setInterval(() => {
+      logger.info(`FFmpeg ${quality.label}: ${lastLine || "(no output yet)"} [${lineCount} lines]`);
+    }, 15_000);
+
+    proc.stdout.resume();
+
     proc.on("close", (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`FFmpeg exited with code ${code}: ${stderr.slice(-500)}`));
+      clearInterval(progressInterval);
+      if (code === 0) {
+        logger.info(`FFmpeg ${quality.label}: done (${lineCount} progress lines)`);
+        resolve();
+      } else {
+        reject(new Error(`FFmpeg exited with code ${code}: ${lastLine}`));
+      }
     });
-    proc.on("error", reject);
+    proc.on("error", (err) => {
+      clearInterval(progressInterval);
+      reject(err);
+    });
   });
 }
 
@@ -147,6 +175,9 @@ async function transcode(job: Job<TranscodeJobData>) {
 
     logger.info(`Downloading ${job.data.fileKey}`);
     await downloadFile(job.data.fileKey, inputPath);
+    const { statSync } = await import("fs");
+    const inputSize = statSync(inputPath).size;
+    logger.info(`Downloaded ${inputSize} bytes to ${inputPath}`);
 
     // Transcode each quality
     const qualityDirs: { label: string; dir: string }[] = [];
@@ -205,6 +236,59 @@ async function transcode(job: Job<TranscodeJobData>) {
   }
 }
 
+async function cleanupStaleJobs(): Promise<void> {
+  const queue = new Queue("transcode", {
+    connection: { url: process.env.REDIS_URL ?? "redis://localhost:6379" },
+  });
+
+  try {
+    const activeJobs = await queue.getJobs(["active"]);
+    logger.info(`Found ${activeJobs.length} stale active job(s) — re-queuing`);
+
+    for (const job of activeJobs) {
+      const data = job.data;
+      if (!data) {
+        await queue.remove(job.id!);
+        logger.info(`Job ${job.id} had no data — removed`);
+        continue;
+      }
+
+      const lesson = await prisma.lesson.findUnique({
+        where: { id: data.lessonId },
+        select: { id: true },
+      });
+      if (!lesson) {
+        await queue.remove(job.id!);
+        logger.info(`Job ${job.id}: lesson ${data.lessonId} gone — removed`);
+        continue;
+      }
+
+      const video = await prisma.videoContent.findUnique({
+        where: { id: data.videoContentId },
+        select: { processingStatus: true },
+      });
+      if (video?.processingStatus === "READY") {
+        await queue.remove(job.id!);
+        logger.info(`Job ${job.id}: already READY — removed`);
+        continue;
+      }
+
+      // Lesson exists but transcode was interrupted — re-add to queue
+      await queue.remove(job.id!);
+      await queue.add("transcode", data);
+      await prisma.videoContent.update({
+        where: { id: data.videoContentId },
+        data: { processingStatus: "PROCESSING" },
+      });
+      logger.info(`Job ${job.id}: re-queued for ${data.lessonId} — will resume automatically`);
+    }
+  } catch (err) {
+    logger.warn("Stale job cleanup failed (non-fatal)", { error: (err as Error).message });
+  } finally {
+    await queue.close();
+  }
+}
+
 export function startTranscodeWorker() {
   const worker = new Worker(
     "transcode",
@@ -231,6 +315,9 @@ export function startTranscodeWorker() {
     logger.warn(`Job ${jobId} stalled — worker may have crashed`);
   });
 
-  logger.info("Transcode worker started");
+  cleanupStaleJobs().then(() => {
+    logger.info("Transcode worker started");
+  });
+
   return worker;
 }
