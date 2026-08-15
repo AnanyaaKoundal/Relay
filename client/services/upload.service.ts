@@ -52,25 +52,21 @@ export async function completeUpload(
   });
 }
 
-/* ─── XHR Upload with Progress (via backend proxy to avoid CORS) ─── */
+/* ─── XHR Upload with Progress (direct to S3 via presigned URL) ─── */
 
 export async function uploadFileWithProgress(
-  proxyBaseUrl: string,
   uploadUrl: string,
   file: File,
   onProgress: (percent: number) => void,
-  proxyPath: string = "/uploads/proxy",
 ): Promise<void> {
   let lastError;
   const attempts = 3;
   for (let i = 0; i < attempts; i++) {
     try {
       return new Promise((resolve, reject) => {
-        const proxyUrl = `${proxyBaseUrl}${proxyPath}?url=${encodeURIComponent(uploadUrl)}`;
         const xhr = new XMLHttpRequest();
-        xhr.open("PUT", proxyUrl);
+        xhr.open("PUT", uploadUrl);
         xhr.setRequestHeader("Content-Type", file.type);
-        xhr.withCredentials = true;
 
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) {

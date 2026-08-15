@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { presignUpload, completeUpload, proxyUpload, retryTranscode, presignBanner, saveBanner, presignAvatar, saveAvatar } from "./uploads.controller.js";
+import { presignUpload, completeUpload, retryTranscode, presignBanner, saveBanner, presignAvatar, saveAvatar } from "./uploads.controller.js";
 import { authenticate } from "../../middleware/authenticate.js";
 import { authorize } from "../../middleware/authorize.js";
 
@@ -10,7 +10,6 @@ router.use(authenticate, authorize("instructor"));
 // Video uploads
 router.post("/presign", presignUpload);
 router.post("/complete", completeUpload);
-router.put("/proxy", proxyUpload);
 router.post("/retry-transcode/:lessonId", retryTranscode);
 
 // Banner uploads

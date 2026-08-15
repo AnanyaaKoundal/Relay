@@ -88,39 +88,6 @@ export const completeUpload = wrap(async (req: Request, res: Response) => {
   res.json(result);
 });
 
-export const proxyUpload = wrap(async (req: Request, res: Response) => {
-  const targetUrl = req.query.url as string;
-  if (!targetUrl) {
-    res.status(400).json({ error: "Missing url query parameter" });
-    return;
-  }
-
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) {
-    chunks.push(Buffer.from(chunk));
-  }
-  const body = Buffer.concat(chunks);
-
-  const headers: Record<string, string> = {};
-  if (req.headers["content-type"]) headers["Content-Type"] = req.headers["content-type"];
-  if (body.length) headers["Content-Length"] = String(body.length);
-
-  const response = await fetch(targetUrl, {
-    method: "PUT",
-    headers,
-    body,
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    logger.error("S3 proxy failed", { status: response.status, body: text });
-    res.status(response.status).json({ error: `S3 returned ${response.status}` });
-    return;
-  }
-
-  res.json({ message: "Upload complete" });
-});
-
 export const retryTranscode = wrap(async (req: Request, res: Response) => {
   const lessonId = req.params.lessonId as string;
 

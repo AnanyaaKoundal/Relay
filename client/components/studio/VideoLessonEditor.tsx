@@ -81,14 +81,14 @@ export function VideoLessonEditor({
 
       const realId = onResolveLessonId ? await onResolveLessonId() : lessonId;
       const { uploadUrl, fileKey } = await presignUpload(file.name, file.type, realId);
-      await uploadFileWithProgress(API_URL, uploadUrl, file, setUploadProgress);
+      await uploadFileWithProgress(uploadUrl, file, setUploadProgress);
       setUploadStatus("done");
       onSave(
         { videoUrl: `${API_URL}/s3/${fileKey}`, durationSeconds: autoDuration, resources: [] },
         title.trim() || lessonTitle,
       );
       onClose();
-      completeUpload(realId, fileKey).catch(() => {});
+      completeUpload(realId, fileKey).catch(() => { });
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Upload failed")
       setUploadStatus("idle");
