@@ -1,14 +1,16 @@
 import { Worker, Job, Queue } from "bullmq";
 import { spawn } from "child_process";
 import { readFile, unlink, mkdir, writeFile } from "fs/promises";
+import { createWriteStream } from "fs";
 import { join, relative as pathRelative } from "path";
 import { tmpdir } from "os";
 import { randomUUID } from "crypto";
+import { pipeline } from "stream/promises";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const ffmpegPath: string = require("ffmpeg-static");
 import type { TranscodeJobData } from "./transcode.queue.js";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import s3, { S3_BUCKET } from "../../lib/s3.js";
 import { prisma } from "../../lib/prisma.js";
 import { logger } from "../../utils/logger.js";
@@ -22,15 +24,14 @@ const QUALITIES = [
 ];
 
 async function downloadFile(key: string, dest: string): Promise<void> {
-  const url = `http://localhost:${process.env.PORT ?? 5000}/s3/${key}`;
   const maxAttempts = 3;
   let lastError: Error | null = null;
   for (let i = 0; i < maxAttempts; i++) {
     try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`Download failed: ${response.status} ${response.statusText}`);
-      const body = new Uint8Array(await response.arrayBuffer());
-      await writeFile(dest, body);
+      const response = await s3.send(new GetObjectCommand({ Bucket: S3_BUCKET, Key: key }));
+      if (!response.Body) throw new Error("Empty response from S3");
+      const writeStream = createWriteStream(dest);
+      await pipeline(response.Body as NodeJS.ReadableStream, writeStream);
       return;
     } catch (err) {
       lastError = err as Error;
