@@ -30,7 +30,7 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-// ─── S3 file proxy (serves files from RustFS without CORS issues) ───
+// ─── CDN boundary stand-in — replaces CloudFront in production ───
 app.use("/s3", async (req, res) => {
   const key = req.path.slice(1); // remove leading "/"
   try {

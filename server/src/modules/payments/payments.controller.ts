@@ -50,6 +50,12 @@ export const getCountry = wrap(async (req: Request, res: Response) => {
     return;
   }
 
+  // Validate IPv4 format — prevents URL injection via x-forwarded-for spoofing
+  if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip)) {
+    res.json({ country: null });
+    return;
+  }
+
   try {
     // country.is returns { country: "US" } for a given IP — free, no key, HTTPS
     const response = await fetch(`https://api.country.is/${ip}`);
