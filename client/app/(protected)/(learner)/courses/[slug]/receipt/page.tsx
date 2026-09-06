@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getPayment } from "@/services/payment.service";
-import { CheckCircle2, Loader2, ArrowRight, Calendar, Hash, MapPin } from "lucide-react";
+import { CheckCircle2, Loader2, ArrowRight, Calendar, Hash, MapPin, FileText } from "lucide-react";
 import { PaymentDetail } from "@/types/payment.types";
 
 export default function ReceiptPage() {
@@ -114,6 +114,17 @@ export default function ReceiptPage() {
             Start Course
             <ArrowRight className="size-4" />
           </Link>
+          {payment.invoiceUrl && (
+            <a
+              href={payment.invoiceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border px-4 text-sm font-medium hover:bg-muted transition-colors"
+            >
+              <FileText className="size-4" />
+              View Invoice
+            </a>
+          )}
           <Link
             href="/courses"
             className="flex h-10 w-full items-center justify-center rounded-lg border px-4 text-sm font-medium hover:bg-muted transition-colors"

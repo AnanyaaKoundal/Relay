@@ -4,6 +4,7 @@ import { Prisma, type Payment } from "@prisma/client";
 import { validateCoupon } from "../instructor/coupons.service.js";
 import crypto from "crypto";
 import type { PurchaseInput } from "./payments.schema.js";
+import { generateInvoice } from "./invoice.service.js";
 
 export async function getTaxRates(): Promise<Record<string, number>> {
   const settings = await prisma.platformSettings.findUnique({
@@ -28,6 +29,7 @@ function formatPayment(payment: Payment, enrollment: { id: string; courseId: str
       currency: payment.currency,
       billingCountry: payment.billingCountry,
       gatewayTransactionId: payment.gatewayTransactionId,
+      invoiceUrl: payment.invoiceUrl,
       status: payment.status,
       createdAt: payment.createdAt,
     },
@@ -158,7 +160,41 @@ export async function purchaseCourse(input: PurchaseInput) {
       return [payment, enrollment] as const;
     });
 
-    return formatPayment(payment, enrollment);
+    // Generate invoice (best-effort — don't fail the purchase if PDF generation fails)
+    let invoiceUrl: string | null = null;
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true, email: true },
+      });
+
+      invoiceUrl = await generateInvoice({
+        paymentId: payment.id,
+        userName: user?.name ?? "Unknown",
+        userEmail: user?.email ?? "",
+        courseTitle: enrollment.course?.title ?? "Course",
+        subtotal: Number(payment.subtotal),
+        discountAmount: Number(payment.discountAmount),
+        taxAmount: Number(payment.taxAmount),
+        totalAmount: Number(payment.totalAmount),
+        currency: payment.currency,
+        billingCountry: payment.billingCountry,
+        gatewayTransactionId: payment.gatewayTransactionId,
+        gateway: payment.gateway,
+        createdAt: payment.createdAt,
+        couponCode: couponCode ?? null,
+      });
+
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: { invoiceUrl },
+      });
+    } catch (e) {
+      // Invoice generation is non-critical — payment still succeeded
+      console.error("Invoice generation failed:", e);
+    }
+
+    return formatPayment({ ...payment, invoiceUrl }, enrollment);
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002" && idempotencyKey) {
       const winner = await prisma.payment.findFirst({
@@ -198,6 +234,7 @@ export async function getPayment(paymentId: string, userId: string) {
     currency: payment.currency,
     billingCountry: payment.billingCountry,
     gatewayTransactionId: payment.gatewayTransactionId,
+    invoiceUrl: payment.invoiceUrl,
     status: payment.status,
     createdAt: payment.createdAt,
     course: payment.enrollments[0]?.course ?? null,

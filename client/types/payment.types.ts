@@ -24,6 +24,7 @@ export interface PurchaseResponse {
         currency: string;
         billingCountry: string;
         gatewayTransactionId: string;
+        invoiceUrl: string | null;
         status: string;
         createdAt: string;
     };
@@ -42,6 +43,7 @@ export interface PaymentDetail {
     currency: string;
     billingCountry: string;
     gatewayTransactionId: string;
+    invoiceUrl: string | null;
     status: string;
     createdAt: string;
     course: {
