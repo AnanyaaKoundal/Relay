@@ -16,6 +16,7 @@ import {
 import type { EnrollmentDetail } from "@/types/enrollment.types";
 import { CurriculumAccordion } from "@/components/learner/course-player/curriculum-accordion";
 import { InstructorCard } from "@/components/learner/instructor-card";
+import { PreviewModal } from "@/components/learner/preview-modal";
 import { Users, BookOpen, Clock, CheckCircle2, ArrowRight } from "lucide-react";
 import { Spinner } from "@/components/shared/spinner";
 
@@ -27,6 +28,7 @@ export default function CourseDetailPage() {
   const [enrollment, setEnrollment] = useState<EnrollmentDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
+  const [preview, setPreview] = useState<{ lessonId: string; lessonTitle: string; contentType: string } | null>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -249,6 +251,9 @@ export default function CourseDetailPage() {
               ? new Map(enrollment.progress.map((p) => [p.lessonId, p.completedAt]))
               : undefined
           }
+          onPreview={(lessonId, lessonTitle, contentType) =>
+            setPreview({ lessonId, lessonTitle, contentType })
+          }
         />
       </section>
 
@@ -258,6 +263,17 @@ export default function CourseDetailPage() {
           <h2 className="text-lg font-semibold">Instructor</h2>
           <InstructorCard name={course.instructor.name} profile={course.instructor.profile} />
         </section>
+      )}
+
+      {/* Preview Modal */}
+      {preview && (
+        <PreviewModal
+          lessonId={preview.lessonId}
+          lessonTitle={preview.lessonTitle}
+          contentType={preview.contentType}
+          open={!!preview}
+          onClose={() => setPreview(null)}
+        />
       )}
     </div>
   );

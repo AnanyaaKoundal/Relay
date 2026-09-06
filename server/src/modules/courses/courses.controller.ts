@@ -23,6 +23,11 @@ export const getPublicCourse = wrap(async (req: Request, res: Response) => {
   res.json(course);
 });
 
+export const getPreviewLesson = wrap(async (req: Request, res: Response) => {
+  const lesson = await courseService.getPreviewLesson(String(req.params.lessonId));
+  res.json(lesson);
+});
+
 /* ─── Instructor ─── */
 
 export const listInstructorCourses = wrap(async (req: Request, res: Response) => {

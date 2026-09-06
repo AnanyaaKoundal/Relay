@@ -78,3 +78,7 @@ export async function submitQuizAttempt(
 export async function getQuizAttempts(lessonId: string): Promise<QuizAttemptsResponse> {
   return request<QuizAttemptsResponse>(`/enrollments/lesson/${lessonId}/quiz-attempts`);
 }
+
+export async function getPreviewLesson(lessonId: string): Promise<EnrollmentLessonContent> {
+  return request<EnrollmentLessonContent>(`/courses/preview/${lessonId}`);
+}

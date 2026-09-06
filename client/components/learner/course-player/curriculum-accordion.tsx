@@ -38,6 +38,7 @@ type CurriculumAccordionProps = {
   enrolledAt?: string;
   enrollmentCompletedAt?: string | null;
   lessonCompletedDates?: Map<string, string>;
+  onPreview?: (lessonId: string, lessonTitle: string, contentType: string) => void;
 };
 
 function contentTypeIcon(type: string) {
@@ -59,6 +60,7 @@ export function CurriculumAccordion({
   enrolledAt,
   enrollmentCompletedAt,
   lessonCompletedDates,
+  onPreview,
 }: CurriculumAccordionProps) {
   const [openChapters, setOpenChapters] = useState<Set<string>>(
     new Set(chapters.map((ch) => ch.id)),
@@ -143,7 +145,16 @@ export function CurriculumAccordion({
                   return (
                     <li
                       key={lesson.id}
-                      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm"
+                      className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm ${
+                        lesson.isPreview && onPreview
+                          ? "cursor-pointer hover:bg-muted/60 transition-colors"
+                          : ""
+                      }`}
+                      onClick={
+                        lesson.isPreview && onPreview
+                          ? () => onPreview(lesson.id, lesson.title, lesson.contentType)
+                          : undefined
+                      }
                     >
                       {isCompleted ? (
                         <CheckCircle2 className="size-4 shrink-0 text-green-500" />

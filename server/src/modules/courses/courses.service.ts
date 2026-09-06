@@ -191,6 +191,66 @@ export async function getPublicCourse(slug: string) {
   return { ...course, coupons: validCoupons };
 }
 
+/* ─── Public lesson preview ─── */
+
+export async function getPreviewLesson(lessonId: string) {
+  const lesson = await prisma.lesson.findUnique({
+    where: { id: lessonId },
+    select: {
+      id: true,
+      title: true,
+      contentType: true,
+      durationSeconds: true,
+      isPreview: true,
+      publishedContentId: true,
+      contentId: true,
+    },
+  });
+
+  if (!lesson || !lesson.isPreview) {
+    throw new AppError("Preview not available for this lesson", 404);
+  }
+
+  const resolvedContentId = lesson.publishedContentId ?? lesson.contentId;
+  let content: Record<string, unknown> | null = null;
+
+  if (lesson.contentType === "VIDEO") {
+    content = await prisma.videoContent.findUnique({
+      where: { id: resolvedContentId },
+      select: { videoUrl: true, hlsUrl: true, processingStatus: true },
+    });
+  } else if (lesson.contentType === "TEXT") {
+    content = await prisma.textContent.findUnique({
+      where: { id: resolvedContentId },
+      select: { body: true },
+    });
+  } else if (lesson.contentType === "QUIZ") {
+    const raw = await prisma.quizContent.findUnique({
+      where: { id: resolvedContentId },
+      select: { questions: true, passThreshold: true },
+    });
+    if (raw) {
+      const parsed = JSON.parse(raw.questions as string);
+      const questions = parsed.map(
+        (q: { correctAnswer: number; rest: unknown }) => {
+          const { correctAnswer: _, ...rest } = q;
+          return rest;
+        }
+      );
+      content = { questions, passThreshold: raw.passThreshold };
+    }
+  }
+
+  return {
+    id: lesson.id,
+    title: lesson.title,
+    contentType: lesson.contentType,
+    durationSeconds: lesson.durationSeconds,
+    isPreview: lesson.isPreview,
+    content,
+  };
+}
+
 /* ─── Instructor ─── */
 
 export async function listInstructorCourses(instructorId: string) {

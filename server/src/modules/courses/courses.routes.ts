@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   browseCourses,
   getPublicCourse,
+  getPreviewLesson,
   listInstructorCourses,
   createCourse,
   updateCourse,
@@ -16,6 +17,7 @@ const router = Router();
 /* ─── Public ─── */
 router.get("/", browseCourses);
 router.get("/published/:slug", getPublicCourse);
+router.get("/preview/:lessonId", getPreviewLesson);
 
 /* ─── Instructor (auth + role required) ─── */
 router.get(
