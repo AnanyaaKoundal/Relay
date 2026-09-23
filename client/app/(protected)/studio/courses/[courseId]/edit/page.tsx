@@ -246,7 +246,7 @@ export default function CourseBuilderWorkspace() {
       <div className="rounded-xl border bg-card flex overflow-hidden">
         <div className="relative w-1/2 shrink-0 bg-muted aspect-video">
           <Image
-            src={resolveBannerUrl(course.bannerUrl) ?? "/thumbnail.avif"}
+            src={resolveBannerUrl(course.bannerUrl) ?? "/thumbnail.png"}
             alt={course.title}
             fill
             className="object-cover"
@@ -257,7 +257,7 @@ export default function CourseBuilderWorkspace() {
           <div className="mb-1.5 flex items-center gap-2">
             <StatusBadge status={course.status} />
             <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-              {Number(course.price) === 0 ? "Free" : `$${Number(course.price).toFixed(2)}`}
+              {Number(course.price) === 0 ? "Free" : `₹${Number(course.price).toFixed(2)}`}
             </span>
           </div>
           {course.description && (

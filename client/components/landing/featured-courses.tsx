@@ -8,8 +8,8 @@ const courses = [
     rating: 4.8,
     duration: "12h",
     difficulty: "Intermediate",
-    price: "$49",
-    thumbnail: "/thumbnail.avif",
+    price: "₹2,999",
+    thumbnail: "/thumbnail.png",
   },
   {
     title: "Machine Learning Fundamentals",
@@ -17,8 +17,8 @@ const courses = [
     rating: 4.9,
     duration: "18h",
     difficulty: "Advanced",
-    price: "$79",
-    thumbnail: "/thumbnail.avif",
+    price: "₹4,999",
+    thumbnail: "/thumbnail.png",
   },
   {
     title: "UI/UX Design Principles",
@@ -27,7 +27,7 @@ const courses = [
     duration: "8h",
     difficulty: "Beginner",
     price: "Free",
-    thumbnail: "/thumbnail.avif",
+    thumbnail: "/thumbnail.png",
   },
   {
     title: "Data Science with Python",
@@ -35,8 +35,8 @@ const courses = [
     rating: 4.6,
     duration: "15h",
     difficulty: "Intermediate",
-    price: "$59",
-    thumbnail: "/thumbnail.avif",
+    price: "₹3,499",
+    thumbnail: "/thumbnail.png",
   },
 ];
 

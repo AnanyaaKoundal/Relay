@@ -21,15 +21,16 @@ export default function BecomeInstructorPage() {
     e.preventDefault();
     setError("");
     const form = new FormData(e.currentTarget);
+    const str = (key: string) => (form.get(key) as string | null)?.trim() || undefined;
     const data = {
       headline: (form.get("headline") as string).trim(),
       bio: (form.get("bio") as string).trim() || undefined,
       expertise: (form.get("expertise") as string).trim() || undefined,
       experience: (form.get("experience") as string).trim() || undefined,
-      twitter: (form.get("twitter") as string).trim() || undefined,
-      linkedin: (form.get("linkedin") as string).trim() || undefined,
-      github: (form.get("github") as string).trim() || undefined,
-      website: (form.get("website") as string).trim() || undefined,
+      twitter: str("twitter"),
+      github: str("github"),
+      linkedin: str("linkedin"),
+      website: str("website"),
     };
     if (data.headline.length < 10) {
       setError("Headline must be at least 10 characters");

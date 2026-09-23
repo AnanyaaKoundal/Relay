@@ -3,7 +3,6 @@
 import { useState, useRef, useCallback } from "react";
 import Cropper from "react-easy-crop";
 import { presignAvatar, saveAvatar, uploadFileWithProgress } from "@/services/upload.service";
-import { API_URL } from "@/lib/config";
 import { resolveAvatarUrl } from "@/lib/utils";
 import { Loader2, Upload, X, Trash2 } from "lucide-react";
 
@@ -108,7 +107,7 @@ export function AvatarUpload({ userId, currentUrl, onUploadComplete, onRemove }:
         const resizedBlob = await resizeImage(croppedBlob, size, size);
         const file = new File([resizedBlob], `avatar-${size}.webp`, { type: "image/webp" });
 
-        await uploadFileWithProgress(API_URL, uploadUrl, file, () => {}, "/auth/proxy");
+        await uploadFileWithProgress(uploadUrl, file, () => {});
         setProgress(Math.round(((i + 1) / presignedUrls.length) * 100));
       }
 

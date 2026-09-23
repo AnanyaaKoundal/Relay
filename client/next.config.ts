@@ -4,7 +4,8 @@ const nextConfig: NextConfig = {
   images: {
     localPatterns: [
       { pathname: "/s3/**" },
-      { pathname: "/thumbnail.avif" },
+      { pathname: "/thumbnail.png" },
+      { pathname: "/logo.png" },
     ],
   },
   async rewrites() {

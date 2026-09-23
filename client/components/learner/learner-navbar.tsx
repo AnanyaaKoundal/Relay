@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
@@ -54,8 +55,9 @@ export function LearnerNavbar() {
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-lg">
       <div className="mx-auto flex h-14 max-w-8xl items-center gap-4 px-4 sm:px-6">
         {/* Logo */}
-        <Link href="/home" className="shrink-0 text-lg font-semibold tracking-tight">
-          Relay
+        <Link href="/home" className="flex shrink-0 items-center gap-2">
+          <Image src="/logo.png" alt="Relay" width={24} height={24} className="size-6 rounded-md object-contain" />
+          <span className="text-lg font-semibold tracking-tight">Relay</span>
         </Link>
 
         {/* Spacer */}

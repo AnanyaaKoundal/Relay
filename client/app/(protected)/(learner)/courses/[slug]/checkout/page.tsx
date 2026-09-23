@@ -342,7 +342,7 @@ export default function CheckoutPage() {
           <div className="rounded-xl border bg-card p-4 space-y-3">
             <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted">
               <Image
-                src={resolveBannerUrl(course.bannerUrl) ?? "/thumbnail.avif"}
+                src={resolveBannerUrl(course.bannerUrl) ?? "/thumbnail.png"}
                 alt={course.title}
                 fill
                 className="object-cover"

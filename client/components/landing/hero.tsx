@@ -45,7 +45,7 @@ export function Hero() {
             <div className="relative w-full max-w-sm rounded-2xl border bg-card shadow-xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
               <div className="aspect-[16/9] relative">
                 <Image
-                  src="/thumbnail.avif"
+                  src="/thumbnail.png"
                   alt="Course thumbnail"
                   fill
                   className="object-cover"

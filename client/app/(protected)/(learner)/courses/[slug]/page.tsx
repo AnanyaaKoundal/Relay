@@ -101,14 +101,14 @@ export default function CourseDetailPage() {
           <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-muted">
             {course.bannerUrl ? (
               <Image
-                src={resolveBannerUrl(course.bannerUrl) ?? "/thumbnail.avif"}
+                src={resolveBannerUrl(course.bannerUrl) ?? "/thumbnail.png"}
                 alt={course.title}
                 fill
                 className="object-cover"
               />
             ) : (
               <Image
-                src="/thumbnail.avif"
+                src="/thumbnail.png"
                 alt={course.title}
                 fill
                 className="object-cover"

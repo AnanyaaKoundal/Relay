@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -29,6 +30,7 @@ export function AdminSidebar() {
     <aside className="w-56 border-r bg-card flex flex-col">
       <div className="flex h-14 items-center border-b px-4">
         <Link href="/admin/dashboard" className="flex items-center gap-2">
+          <Image src="/logo.png" alt="Relay" width={22} height={22} className="size-5 rounded-md object-contain" />
           <span className="text-sm font-semibold tracking-tight">Relay</span>
           <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
             Admin

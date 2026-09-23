@@ -56,7 +56,7 @@ export function CoursesTable({
                   >
                     <div className="relative size-12 shrink-0 overflow-hidden rounded-md bg-muted">
                       <Image
-                        src={resolveBannerUrl(enrollment.course.bannerUrl) ?? "/thumbnail.avif"}
+                        src={resolveBannerUrl(enrollment.course.bannerUrl) ?? "/thumbnail.png"}
                         alt={enrollment.course.title}
                         fill
                         sizes="48px"

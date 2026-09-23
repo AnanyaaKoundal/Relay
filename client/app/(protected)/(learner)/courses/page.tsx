@@ -26,7 +26,7 @@ const categories = [
 
 const difficulties = ["All", "Beginner", "Intermediate", "Advanced"];
 
-const THUMBNAIL = "/thumbnail.avif";
+const THUMBNAIL = "/thumbnail.png";
 
 function CourseCatalogCard({ course }: { course: PublicCourse }) {
   const discounted =

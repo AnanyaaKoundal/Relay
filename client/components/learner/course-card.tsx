@@ -64,7 +64,7 @@ export function CourseCard({
             />
           ) : (
             <Image
-              src="/thumbnail.avif"
+              src="/thumbnail.png"
               alt={title}
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"

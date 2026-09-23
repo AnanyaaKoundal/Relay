@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { RelayPattern } from "@/components/auth/relay-pattern";
@@ -29,9 +31,13 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="flex min-h-full">
+    <div className="flex min-h-screen">
       {/* Left — Brand panel */}
       <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center relative bg-muted/30 overflow-hidden p-12">
+        <Link href="/" className="absolute top-10 left-12 z-10 flex items-center gap-2.5">
+          <Image src="/logo.png" alt="Relay" width={32} height={32} className="size-8 rounded-md object-contain" />
+          <span className="text-lg font-semibold tracking-tight">Relay</span>
+        </Link>
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <RelayPattern className="size-[500px] text-emerald-600" />
         </div>
@@ -71,7 +77,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="w-full max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-700">
           {/* mobile header */}
           <div className="lg:hidden flex flex-col items-center mb-8">
-            <span className="text-lg font-semibold tracking-tight">Relay</span>
+            <div className="flex items-center gap-2">
+              <Image src="/logo.png" alt="Relay" width={28} height={28} className="size-7 rounded-md object-contain" />
+              <span className="text-lg font-semibold tracking-tight">Relay</span>
+            </div>
             <p className="mt-0.5 text-xs text-muted-foreground">Where knowledge moves forward.</p>
           </div>
 

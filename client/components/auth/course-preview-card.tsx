@@ -5,7 +5,7 @@ export function CoursePreviewCard() {
     <div className="relative w-full max-w-xs rounded-2xl border bg-card shadow-xl overflow-hidden transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl">
       <div className="aspect-[16/10] relative">
         <Image
-          src="/thumbnail.avif"
+          src="/thumbnail.png"
           alt="Course preview"
           fill
           className="object-cover"

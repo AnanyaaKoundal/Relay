@@ -31,7 +31,7 @@ export default function ReceiptPage() {
       .finally(() => setLoading(false));
   }, [paymentId]);
 
-  const currencySymbol = payment?.currency === "INR" ? "₹" : payment?.currency === "USD" ? "$" : "₹";
+  const currencySymbol = "₹";
 
   if (loading) {
     return (

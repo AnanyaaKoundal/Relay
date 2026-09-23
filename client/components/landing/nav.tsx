@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 
 const links = [
@@ -28,7 +29,10 @@ export function Nav() {
       }`}
     >
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-6">
-        <span className="text-lg font-semibold tracking-tight">Relay</span>
+        <span className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+          <Image src="/logo.png" alt="Relay" width={24} height={24} className="size-6 rounded-md object-contain" />
+          Relay
+        </span>
 
         <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
           {links.map((link) => (

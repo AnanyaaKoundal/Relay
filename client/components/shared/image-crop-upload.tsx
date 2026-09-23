@@ -3,7 +3,6 @@
 import { useState, useRef, useCallback } from "react";
 import Cropper from "react-easy-crop";
 import { presignBanner, saveBanner, uploadFileWithProgress } from "@/services/upload.service";
-import { API_URL } from "@/lib/config";
 import { Loader2, Upload, X } from "lucide-react";
 import { resolveBannerUrl } from "@/lib/utils";
 
@@ -114,12 +113,7 @@ export function ImageCropUpload({ courseId, currentUrl, onUploadComplete }: Imag
         const resizedBlob = await resizeImage(croppedBlob, width, height);
         const file = new File([resizedBlob], `banner-${size}.webp`, { type: "image/webp" });
 
-        await uploadFileWithProgress(
-          API_URL,
-          uploadUrl,
-          file,
-          () => {},
-        );
+        await uploadFileWithProgress(uploadUrl, file, () => {});
 
         setProgress(Math.round(((i + 1) / presignedUrls.length) * 100));
       }

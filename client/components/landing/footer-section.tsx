@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 const quickLinks = ["Browse courses", "Categories", "Instructors", "Pricing"];
@@ -9,7 +10,10 @@ export function FooterSection() {
       <div className="mx-auto max-w-7xl px-6">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div className="sm:col-span-2 lg:col-span-1">
-            <span className="text-lg font-semibold tracking-tight">Relay</span>
+            <span className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+            <Image src="/logo.png" alt="Relay" width={24} height={24} className="size-6 rounded-md object-contain" />
+            Relay
+          </span>
             <p className="mt-2 text-sm text-muted-foreground max-w-xs leading-relaxed">
               A modern knowledge platform for creators and learners.
             </p>

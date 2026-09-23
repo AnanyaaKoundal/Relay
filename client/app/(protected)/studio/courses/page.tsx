@@ -166,14 +166,14 @@ export default function StudioCoursesPage() {
                 >
                   {course.bannerUrl ? (
                     <Image
-                      src={resolveBannerUrl(course.bannerUrl) ?? "/thumbnail.avif"}
+                      src={resolveBannerUrl(course.bannerUrl) ?? "/thumbnail.png"}
                       alt=""
                       fill
                       className="object-cover"
                     />
                   ) : (
                     <Image
-                      src="/thumbnail.avif"
+                      src="/thumbnail.png"
                       alt=""
                       fill
                       className="object-cover"
@@ -204,7 +204,7 @@ export default function StudioCoursesPage() {
                       {course._count.enrollments} enrolled
                     </span>
                     <span className="hidden sm:inline">
-                      ${Number(course.price).toFixed(2)}
+                      ₹{Number(course.price).toFixed(2)}
                     </span>
                     <span className="hidden sm:inline">
                       Updated{" "}
