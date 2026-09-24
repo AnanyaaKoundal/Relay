@@ -73,7 +73,7 @@ export function FeaturedCourses() {
                 </span>
               </div>
               <div className="p-4 space-y-2">
-                <h3 className="font-semibold text-sm leading-snug line-clamp-2">
+                <h3 className="min-h-[2.5rem] font-semibold text-sm leading-snug line-clamp-2">
                   {course.title}
                 </h3>
                 <p className="text-xs text-muted-foreground">{course.creator}</p>

@@ -97,7 +97,7 @@ export function CourseCard({
 
         {/* Info */}
         <div className="p-3 space-y-2">
-          <h3 className="text-sm font-semibold leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+          <h3 className="min-h-[2.5rem] text-sm font-semibold leading-snug line-clamp-2 group-hover:text-primary transition-colors">
             {title}
           </h3>
 
