@@ -179,8 +179,8 @@ Checkout with coupon, tax, and enrollment:
     <td width="50%" align="center"><img src="docs/screenshots/StudioEarning.png" alt="Studio earnings" width="100%" /></td>
   </tr>
   <tr>
+    <td width="50%" align="center"><img src="docs/screenshots/StudioCourses.png" alt="Studio course list" width="100%" /></td>
     <td width="50%" align="center"><img src="docs/screenshots/CourseEditPage.png" alt="Course builder" width="100%" /></td>
-    <td width="50%" align="center"></td>
   </tr>
 </table>
 
@@ -193,7 +193,7 @@ Checkout with coupon, tax, and enrollment:
   </tr>
   <tr>
     <td width="50%" align="center"><img src="docs/screenshots/AdminPayoutPage.png" alt="Admin payouts" width="100%" /></td>
-    <td width="50%" align="center"></td>
+    <td width="50%" align="center"><img src="docs/screenshots/AdminUserDetail.png" alt="Admin user detail" width="100%" /></td>
   </tr>
 </table>
 
