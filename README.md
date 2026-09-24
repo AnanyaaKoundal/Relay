@@ -125,7 +125,7 @@ Each failure mode below is handled by design.
 Prerequisites: Node.js 18+, Docker (RustFS + Redis), a PostgreSQL database (Neon or local).
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/AnanyaaKoundal/Relay.git
 cd relay
 
 docker compose up -d          # RustFS + Redis
